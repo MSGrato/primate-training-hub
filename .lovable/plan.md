@@ -1,56 +1,39 @@
 
 
-# Job Titles Enhancement + User Management Updates
+# Add "Assign Training to User" on Manage Trainings Page
 
 ## Overview
-Three changes: (1) enhance Job Titles to support tags and descriptions, (2) add job title assignment and active/inactive status to User Management, (3) replace user deletion with deactivation.
+Add an "Assign" action button to each training row in the Manage Trainings table. Clicking it opens a dialog where the coordinator can select one or more users to manually assign the training to, inserting rows into the existing `user_training_assignments` table.
 
 ## What will change
 
-### 1. Database migrations
-- Add `description` (text, nullable) column to `job_titles` table
-- Add `is_active` (boolean, default true) column to `profiles` table
+### Manage Trainings page (`src/pages/dashboard/ManageTrainings.tsx`)
+- Add a new **Assign** icon button (UserPlus icon) in the Actions column for each training row
+- Add a new **Assign Training** dialog that:
+  - Shows the training title at the top
+  - Fetches all active user profiles and displays them as a list with checkboxes
+  - Pre-checks users who are already assigned to this training (fetched from `user_training_assignments`)
+  - Has a "Save Assignments" button that inserts new assignments and removes unchecked ones
+- Fetch profiles from `profiles` table (only active users) and existing assignments from `user_training_assignments`
 
-### 2. Job Titles page (`JobTitles.tsx`)
-- Expand the "Add Title" dialog to include:
-  - A **description** text area
-  - A **tags** multi-select (checkboxes listing all existing job tags)
-- On create, insert the job title, then insert rows into `job_title_tags` for selected tags
-- Show description in the table (new column)
-- Allow editing a job title (name, description, tags) via an edit dialog
-
-### 3. User Management page (`UserManagement.tsx`)
-- **Add User dialog**: add a Job Title dropdown (fetched from `job_titles` table)
-- **Edit User dialog**: add a Job Title dropdown
-- **Replace Delete with Active/Inactive toggle**:
-  - Remove the delete button and delete confirmation dialog
-  - Add a Status column showing Active/Inactive badge
-  - Add a toggle button per row to activate/deactivate
-  - Deactivation updates `profiles.is_active = false` (via the `manage-users` edge function)
-  - Inactive users cannot log in (enforced by checking `is_active` in the auth flow)
-- Pass `job_title_id` to the `manage-users` edge function on create/update
-
-### 4. Backend function (`manage-users/index.ts`)
-- **Create action**: accept optional `job_title_id`, set it on the profile after creation
-- **Update action**: accept optional `job_title_id` and `is_active`, update the profile accordingly
-- **Remove delete action** -- replace with deactivation (set `is_active = false`)
-- Keep the old delete action available but rename to "deactivate" logic
-
-### 5. Auth flow update (`AuthContext.tsx`)
-- After fetching the profile, check `is_active`. If `false`, sign the user out and show an error indicating their account is inactive.
-
----
+### No database changes needed
+The `user_training_assignments` table already exists with `user_id`, `training_id`, and `assigned_at` columns. RLS policies already allow coordinators full access.
 
 ## Technical Details
 
-### Migration SQL
-```sql
-ALTER TABLE public.job_titles ADD COLUMN description text;
-ALTER TABLE public.profiles ADD COLUMN is_active boolean NOT NULL DEFAULT true;
-```
+### New state in ManageTrainings
+- `assignOpen` (boolean) -- controls assignment dialog visibility
+- `assignTraining` (object) -- the training being assigned
+- `profiles` (array) -- list of active users fetched from `profiles`
+- `selectedUserIds` (Set) -- checked user IDs in the dialog
+- `existingAssignmentIds` (Set) -- user IDs already assigned
+
+### Assignment logic
+- On dialog open: fetch `user_training_assignments` where `training_id = selected training` and fetch all active profiles
+- On save:
+  - **New assignments**: IDs in `selectedUserIds` but not in `existingAssignmentIds` -- insert into `user_training_assignments`
+  - **Removed assignments**: IDs in `existingAssignmentIds` but not in `selectedUserIds` -- delete from `user_training_assignments`
 
 ### Files modified
-- `supabase/functions/manage-users/index.ts` -- add `job_title_id`, `is_active` support; replace delete with deactivate
-- `src/pages/dashboard/JobTitles.tsx` -- add description field, tag multi-select in create dialog; show description column
-- `src/pages/dashboard/UserManagement.tsx` -- add job title dropdown, replace delete with active/inactive toggle, show status column
-- `src/contexts/AuthContext.tsx` -- check `is_active` on profile fetch, sign out if inactive
+- `src/pages/dashboard/ManageTrainings.tsx` -- add assign button, dialog, and assignment logic
+
