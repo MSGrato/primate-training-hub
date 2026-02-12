@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, UserPlus } from "lucide-react";
 
 export default function ManageTrainings() {
   const { toast } = useToast();
@@ -18,6 +20,14 @@ export default function ManageTrainings() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ title: "", description: "", category: "onboarding" as "onboarding" | "on_the_job" | "sop", frequency: "one_time" as "one_time" | "annual" | "semi_annual" | "as_needed", content_url: "" });
+
+  // Assign dialog state
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignTraining, setAssignTraining] = useState<any>(null);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [existingAssignmentIds, setExistingAssignmentIds] = useState<Set<string>>(new Set());
+  const [assignLoading, setAssignLoading] = useState(false);
 
   const fetchTrainings = async () => {
     const { data } = await supabase.from("trainings").select("*").order("created_at", { ascending: false });
@@ -59,6 +69,46 @@ export default function ManageTrainings() {
     if (error) { toast({ variant: "destructive", title: "Error", description: error.message }); return; }
     toast({ title: "Training deleted" });
     fetchTrainings();
+  };
+
+  const handleOpenAssign = async (training: any) => {
+    setAssignTraining(training);
+    setAssignOpen(true);
+    setAssignLoading(true);
+    const [{ data: profilesData }, { data: assignmentsData }] = await Promise.all([
+      supabase.from("profiles").select("user_id, full_name").eq("is_active", true).order("full_name"),
+      supabase.from("user_training_assignments").select("user_id").eq("training_id", training.id),
+    ]);
+    setProfiles(profilesData || []);
+    const existingIds = new Set((assignmentsData || []).map((a: any) => a.user_id));
+    setExistingAssignmentIds(existingIds);
+    setSelectedUserIds(new Set(existingIds));
+    setAssignLoading(false);
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!assignTraining) return;
+    const toInsert = [...selectedUserIds].filter((id) => !existingAssignmentIds.has(id));
+    const toDelete = [...existingAssignmentIds].filter((id) => !selectedUserIds.has(id));
+
+    if (toInsert.length > 0) {
+      const { error } = await supabase.from("user_training_assignments").insert(toInsert.map((user_id) => ({ user_id, training_id: assignTraining.id })));
+      if (error) { toast({ variant: "destructive", title: "Error", description: error.message }); return; }
+    }
+    if (toDelete.length > 0) {
+      const { error } = await supabase.from("user_training_assignments").delete().eq("training_id", assignTraining.id).in("user_id", toDelete);
+      if (error) { toast({ variant: "destructive", title: "Error", description: error.message }); return; }
+    }
+    toast({ title: "Assignments updated" });
+    setAssignOpen(false);
+  };
+
+  const toggleUser = (userId: string) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId); else next.add(userId);
+      return next;
+    });
   };
 
   if (loading) return <div className="text-muted-foreground">Loading...</div>;
@@ -124,6 +174,7 @@ export default function ManageTrainings() {
                   <TableCell>{t.frequency?.replace("_", " ")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => handleOpenAssign(t)} title="Assign users"><UserPlus className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" onClick={() => handleEdit(t)}><Pencil className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
@@ -134,6 +185,30 @@ export default function ManageTrainings() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign: {assignTraining?.title}</DialogTitle>
+          </DialogHeader>
+          {assignLoading ? (
+            <div className="text-muted-foreground py-4">Loading users...</div>
+          ) : (
+            <ScrollArea className="max-h-72">
+              <div className="space-y-2">
+                {profiles.map((p) => (
+                  <label key={p.user_id} className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded hover:bg-muted">
+                    <Checkbox checked={selectedUserIds.has(p.user_id)} onCheckedChange={() => toggleUser(p.user_id)} />
+                    <span className="text-sm">{p.full_name}</span>
+                  </label>
+                ))}
+                {profiles.length === 0 && <p className="text-sm text-muted-foreground">No active users found.</p>}
+              </div>
+            </ScrollArea>
+          )}
+          <Button onClick={handleSaveAssignments} disabled={assignLoading} className="w-full">Save Assignments</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
