@@ -21,7 +21,7 @@ export default function TrainingReport() {
 
       const { data: completions } = await supabase
         .from("training_completions")
-        .select("training_id, completed_at, status")
+        .select("training_id, completed_at, approved_at, status")
         .eq("user_id", user.id)
         .eq("status", "approved")
         .order("completed_at", { ascending: false });
@@ -34,7 +34,7 @@ export default function TrainingReport() {
       const rows = (assignments || []).map((a: any) => {
         const t = a.training;
         const lastCompletion = completionMap.get(t.id);
-        const lastDate = lastCompletion ? new Date(lastCompletion.completed_at) : null;
+        const lastDate = lastCompletion ? new Date(lastCompletion.approved_at || lastCompletion.completed_at) : null;
         let nextDue: Date | null = null;
         if (lastDate && t.frequency !== "one_time" && t.frequency !== "as_needed") {
           if (t.frequency === "annual") nextDue = addYears(lastDate, 1);
