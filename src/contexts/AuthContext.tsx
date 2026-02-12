@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type AppRole = "employee" | "supervisor" | "coordinator";
 
@@ -10,6 +11,7 @@ interface Profile {
   full_name: string;
   net_id: string;
   job_title_id: string | null;
+  is_active: boolean;
 }
 
 interface AuthContextType {
@@ -30,13 +32,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const fetchProfileAndRole = async (userId: string) => {
     const [profileRes, roleRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
     ]);
-    setProfile(profileRes.data as Profile | null);
+
+    const profileData = profileRes.data as Profile | null;
+
+    // Check if user is inactive
+    if (profileData && profileData.is_active === false) {
+      await supabase.auth.signOut();
+      toast({
+        title: "Account Inactive",
+        description: "Your account has been deactivated. Please contact your training coordinator.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProfile(profileData);
     setRole((roleRes.data?.role as AppRole) ?? "employee");
   };
 
