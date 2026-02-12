@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap } from "lucide-react";
+import { PrimateLogo } from "@/components/PrimateLogo";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
@@ -38,7 +38,7 @@ export default function Login() {
       <Card className="w-full max-w-md mx-4 shadow-2xl">
         <CardHeader className="text-center space-y-4 pb-2">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-            <GraduationCap className="h-8 w-8 text-primary-foreground" />
+            <PrimateLogo className="h-8 w-8 text-primary-foreground" />
           </div>
           <CardTitle className="text-2xl font-bold text-primary">WaNBRC Train</CardTitle>
           <p className="text-sm text-muted-foreground">Training Management System</p>

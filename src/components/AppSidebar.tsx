@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap } from "lucide-react";
+import { PrimateLogo } from "@/components/PrimateLogo";
 
 export function AppSidebar() {
   const { profile, role, signOut } = useAuth();
@@ -59,7 +59,7 @@ export function AppSidebar() {
     <Sidebar className="border-r-0">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <GraduationCap className="h-6 w-6 text-secondary" />
+          <PrimateLogo className="h-6 w-6 text-secondary" />
           <span className="text-lg font-bold text-sidebar-foreground">WaNBRC Train</span>
         </div>
       </SidebarHeader>
