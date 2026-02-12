@@ -8,23 +8,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Pencil, Trash2 } from "lucide-react";
+import { UserPlus, Pencil } from "lucide-react";
 
 interface UserRow {
   user_id: string;
   full_name: string;
   net_id: string;
   role: string;
+  is_active: boolean;
+  job_title_id: string | null;
+}
+
+interface JobTitle {
+  id: string;
+  name: string;
 }
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
@@ -35,22 +42,35 @@ export default function UserManagement() {
   const [formEmail, setFormEmail] = useState("");
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState("employee");
+  const [formJobTitleId, setFormJobTitleId] = useState<string>("none");
 
   const fetchUsers = async () => {
-    const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, net_id");
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, net_id, is_active, job_title_id");
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const roleMap = new Map<string, string>();
     roles?.forEach((r) => roleMap.set(r.user_id, r.role));
-    const combined = (profiles || []).map((p) => ({
-      ...p,
+    const combined: UserRow[] = (profiles || []).map((p: any) => ({
+      user_id: p.user_id,
+      full_name: p.full_name,
+      net_id: p.net_id,
+      is_active: p.is_active ?? true,
+      job_title_id: p.job_title_id,
       role: roleMap.get(p.user_id) || "employee",
     }));
     setUsers(combined);
     setLoading(false);
   };
 
+  const fetchJobTitles = async () => {
+    const { data } = await supabase.from("job_titles").select("id, name").order("name");
+    setJobTitles(data || []);
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchJobTitles();
   }, []);
 
   const roleLabel = (r: string) => {
@@ -67,6 +87,7 @@ export default function UserManagement() {
     setFormEmail("");
     setFormPassword("");
     setFormRole("employee");
+    setFormJobTitleId("none");
   };
 
   const invokeManageUsers = async (body: Record<string, unknown>) => {
@@ -90,6 +111,7 @@ export default function UserManagement() {
         full_name: formName.trim(),
         net_id: formNetId.trim(),
         role: formRole,
+        job_title_id: formJobTitleId !== "none" ? formJobTitleId : null,
       });
       toast({ title: "User created successfully" });
       setAddOpen(false);
@@ -112,6 +134,7 @@ export default function UserManagement() {
         full_name: formName.trim(),
         net_id: formNetId.trim(),
         role: formRole,
+        job_title_id: formJobTitleId !== "none" ? formJobTitleId : null,
       });
       toast({ title: "User updated successfully" });
       setEditOpen(false);
@@ -125,22 +148,17 @@ export default function UserManagement() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedUser) return;
-    setSubmitting(true);
+  const handleToggleActive = async (u: UserRow) => {
     try {
       await invokeManageUsers({
-        action: "delete",
-        user_id: selectedUser.user_id,
+        action: "update",
+        user_id: u.user_id,
+        is_active: !u.is_active,
       });
-      toast({ title: "User deleted successfully" });
-      setDeleteOpen(false);
-      setSelectedUser(null);
+      toast({ title: `User ${u.is_active ? "deactivated" : "activated"} successfully` });
       await fetchUsers();
     } catch (e: any) {
-      toast({ title: "Error deleting user", description: e.message, variant: "destructive" });
-    } finally {
-      setSubmitting(false);
+      toast({ title: "Error updating status", description: e.message, variant: "destructive" });
     }
   };
 
@@ -149,12 +167,13 @@ export default function UserManagement() {
     setFormName(u.full_name);
     setFormNetId(u.net_id);
     setFormRole(u.role);
+    setFormJobTitleId(u.job_title_id || "none");
     setEditOpen(true);
   };
 
-  const openDelete = (u: UserRow) => {
-    setSelectedUser(u);
-    setDeleteOpen(true);
+  const jobTitleName = (id: string | null) => {
+    if (!id) return "—";
+    return jobTitles.find((jt) => jt.id === id)?.name || "—";
   };
 
   if (loading) return <div className="text-muted-foreground">Loading...</div>;
@@ -176,6 +195,8 @@ export default function UserManagement() {
                 <TableHead>Name</TableHead>
                 <TableHead>NetID</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Job Title</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -187,15 +208,22 @@ export default function UserManagement() {
                   <TableCell>
                     <Badge className="bg-secondary text-secondary-foreground">{roleLabel(u.role)}</Badge>
                   </TableCell>
+                  <TableCell className="text-sm">{jobTitleName(u.job_title_id)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openDelete(u)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={u.is_active}
+                        onCheckedChange={() => handleToggleActive(u)}
+                      />
+                      <Badge variant={u.is_active ? "default" : "secondary"}>
+                        {u.is_active ? "Active" : "Inactive"}
+                      </Badge>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -239,6 +267,18 @@ export default function UserManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Job Title</Label>
+              <Select value={formJobTitleId} onValueChange={setFormJobTitleId}>
+                <SelectTrigger><SelectValue placeholder="Select job title" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {jobTitles.map((jt) => (
+                    <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
@@ -276,6 +316,18 @@ export default function UserManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Job Title</Label>
+              <Select value={formJobTitleId} onValueChange={setFormJobTitleId}>
+                <SelectTrigger><SelectValue placeholder="Select job title" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {jobTitles.map((jt) => (
+                    <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
@@ -285,24 +337,6 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete User</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedUser?.full_name}</strong>? This will remove their account and all associated data permanently.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={submitting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {submitting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

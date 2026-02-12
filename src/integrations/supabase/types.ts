@@ -68,16 +68,19 @@ export type Database = {
       job_titles: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
         }
@@ -88,6 +91,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_active: boolean
           job_title_id: string | null
           net_id: string
           updated_at: string
@@ -97,6 +101,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          is_active?: boolean
           job_title_id?: string | null
           net_id: string
           updated_at?: string
@@ -106,6 +111,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          is_active?: boolean
           job_title_id?: string | null
           net_id?: string
           updated_at?: string
