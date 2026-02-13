@@ -71,7 +71,11 @@ Deno.serve(async (req) => {
         email,
         password,
         email_confirm: true,
-        user_metadata: { full_name, net_id },
+        user_metadata: {
+          full_name,
+          net_id,
+          force_password_reset: true,
+        },
       });
 
       if (createErr) {

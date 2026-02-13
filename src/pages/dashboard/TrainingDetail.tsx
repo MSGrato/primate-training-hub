@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, XCircle, Loader2, ExternalLink, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -136,6 +136,22 @@ export default function TrainingDetail() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{training.description}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {training.content_url && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Training Material</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="gap-2">
+              <a href={training.content_url} target="_blank" rel="noreferrer">
+                {training.content_type === "file" ? <FileText className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                {training.content_type === "file" ? "Open Document" : "Open Link"}
+              </a>
+            </Button>
           </CardContent>
         </Card>
       )}

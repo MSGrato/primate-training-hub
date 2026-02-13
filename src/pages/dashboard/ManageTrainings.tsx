@@ -13,13 +13,28 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, UserPlus } from "lucide-react";
 
+type TrainingCategory = "onboarding" | "on_the_job" | "sop";
+type TrainingFrequency = "one_time" | "annual" | "semi_annual" | "as_needed";
+type TrainingContentType = "link" | "file" | null;
+
+const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
+
 export default function ManageTrainings() {
   const { toast } = useToast();
   const [trainings, setTrainings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ title: "", description: "", category: "onboarding" as "onboarding" | "on_the_job" | "sop", frequency: "one_time" as "one_time" | "annual" | "semi_annual" | "as_needed", content_url: "" });
+  const [saving, setSaving] = useState(false);
+  const [materialFile, setMaterialFile] = useState<File | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category: "onboarding" as TrainingCategory,
+    frequency: "one_time" as TrainingFrequency,
+    content_url: "",
+    content_type: null as TrainingContentType,
+  });
 
   // Assign dialog state
   const [assignOpen, setAssignOpen] = useState(false);
@@ -38,28 +53,97 @@ export default function ManageTrainings() {
   useEffect(() => { fetchTrainings(); }, []);
 
   const resetForm = () => {
-    setForm({ title: "", description: "", category: "onboarding", frequency: "one_time", content_url: "" });
+    setForm({ title: "", description: "", category: "onboarding", frequency: "one_time", content_url: "", content_type: null });
+    setMaterialFile(null);
     setEditing(null);
+  };
+
+  const getFileExtension = (fileName: string) => {
+    const lowerName = fileName.toLowerCase();
+    return ALLOWED_EXTENSIONS.find((ext) => lowerName.endsWith(ext)) ?? null;
+  };
+
+  const uploadTrainingMaterial = async (file: File) => {
+    const ext = getFileExtension(file.name);
+    if (!ext) {
+      toast({
+        variant: "destructive",
+        title: "Unsupported file type",
+        description: "Allowed files: PowerPoint, Excel, PDF, and Word documents.",
+      });
+      return null;
+    }
+
+    const sanitizedName = (form.title || "training").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const objectPath = `materials/${Date.now()}-${sanitizedName || "training"}${ext}`;
+    const { error } = await supabase.storage.from("training-materials").upload(objectPath, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+
+    if (error) {
+      toast({ variant: "destructive", title: "Upload failed", description: error.message });
+      return null;
+    }
+
+    return supabase.storage.from("training-materials").getPublicUrl(objectPath).data.publicUrl;
   };
 
   const handleSave = async () => {
     if (!form.title.trim()) { toast({ variant: "destructive", title: "Title is required" }); return; }
+    setSaving(true);
+
+    let nextContentUrl = form.content_url.trim();
+    let nextContentType = form.content_type;
+
+    if (materialFile) {
+      const uploadedUrl = await uploadTrainingMaterial(materialFile);
+      if (!uploadedUrl) {
+        setSaving(false);
+        return;
+      }
+      nextContentUrl = uploadedUrl;
+      nextContentType = "file";
+    } else if (nextContentUrl && nextContentType !== "file") {
+      nextContentType = "link";
+    } else {
+      nextContentType = null;
+    }
+
+    const payload = {
+      title: form.title.trim(),
+      description: form.description || null,
+      category: form.category,
+      frequency: form.frequency,
+      content_url: nextContentUrl || null,
+      content_type: nextContentType,
+    };
+
     if (editing) {
-      const { error } = await supabase.from("trainings").update(form).eq("id", editing.id);
-      if (error) { toast({ variant: "destructive", title: "Error", description: error.message }); return; }
+      const { error } = await supabase.from("trainings").update(payload).eq("id", editing.id);
+      if (error) { toast({ variant: "destructive", title: "Error", description: error.message }); setSaving(false); return; }
       toast({ title: "Training updated" });
     } else {
-      const { error } = await supabase.from("trainings").insert([form]);
-      if (error) { toast({ variant: "destructive", title: "Error", description: error.message }); return; }
+      const { error } = await supabase.from("trainings").insert([payload]);
+      if (error) { toast({ variant: "destructive", title: "Error", description: error.message }); setSaving(false); return; }
       toast({ title: "Training created" });
     }
     setOpen(false);
     resetForm();
     fetchTrainings();
+    setSaving(false);
   };
 
   const handleEdit = (t: any) => {
-    setForm({ title: t.title, description: t.description || "", category: t.category, frequency: t.frequency, content_url: t.content_url || "" });
+    setForm({
+      title: t.title,
+      description: t.description || "",
+      category: t.category,
+      frequency: t.frequency,
+      content_url: t.content_url || "",
+      content_type: t.content_type || (t.content_url ? "link" : null),
+    });
+    setMaterialFile(null);
     setEditing(t);
     setOpen(true);
   };
@@ -129,7 +213,7 @@ export default function ManageTrainings() {
               <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
               <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
               <div><Label>Category</Label>
-                <Select value={form.category} onValueChange={(v: "onboarding" | "on_the_job" | "sop") => setForm({ ...form, category: v })}>
+                <Select value={form.category} onValueChange={(v: TrainingCategory) => setForm({ ...form, category: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="onboarding">On-boarding</SelectItem>
@@ -139,7 +223,7 @@ export default function ManageTrainings() {
                 </Select>
               </div>
               <div><Label>Frequency</Label>
-                <Select value={form.frequency} onValueChange={(v: "one_time" | "annual" | "semi_annual" | "as_needed") => setForm({ ...form, frequency: v })}>
+                <Select value={form.frequency} onValueChange={(v: TrainingFrequency) => setForm({ ...form, frequency: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="one_time">One-time</SelectItem>
@@ -149,8 +233,47 @@ export default function ManageTrainings() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Content URL</Label><Input value={form.content_url} onChange={(e) => setForm({ ...form, content_url: e.target.value })} placeholder="https://..." /></div>
-              <Button onClick={handleSave} className="w-full">{editing ? "Update" : "Create"}</Button>
+              <div className="space-y-2">
+                <Label>Material URL (optional)</Label>
+                <Input
+                  value={form.content_url}
+                  onChange={(e) => setForm({ ...form, content_url: e.target.value, content_type: e.target.value.trim() ? "link" : null })}
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Upload Material File (optional)</Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (!file) {
+                      setMaterialFile(null);
+                      return;
+                    }
+
+                    if (!getFileExtension(file.name)) {
+                      toast({
+                        variant: "destructive",
+                        title: "Unsupported file type",
+                        description: "Allowed files: .ppt, .pptx, .xls, .xlsx, .pdf, .doc, .docx",
+                      });
+                      e.currentTarget.value = "";
+                      setMaterialFile(null);
+                      return;
+                    }
+
+                    setMaterialFile(file);
+                    setForm({ ...form, content_type: "file" });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Accepted: PowerPoint, Excel, PDF, and Word. Uploading a file will override the URL.
+                </p>
+                {materialFile && <p className="text-xs text-muted-foreground">Selected file: {materialFile.name}</p>}
+              </div>
+              <Button onClick={handleSave} className="w-full" disabled={saving}>{editing ? "Update" : "Create"}</Button>
             </div>
           </DialogContent>
         </Dialog>

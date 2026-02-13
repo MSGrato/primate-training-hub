@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function DashboardLayout() {
   const { session, loading } = useAuth();
+  const requiresPasswordReset = session?.user.user_metadata?.force_password_reset === true;
 
   if (loading) {
     return (
@@ -16,6 +17,10 @@ export default function DashboardLayout() {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requiresPasswordReset) {
+    return <Navigate to="/reset-password" replace />;
   }
 
   return (
