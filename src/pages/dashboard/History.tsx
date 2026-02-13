@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Navigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -209,7 +210,7 @@ export default function History() {
   if (loading) return <div className="text-muted-foreground">Loading history...</div>;
 
   if (role !== "coordinator") {
-    return <div className="text-muted-foreground">Coordinator access is required.</div>;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
