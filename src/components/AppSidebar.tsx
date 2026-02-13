@@ -8,6 +8,7 @@ import {
   UserPlus,
   CheckSquare,
   User,
+  History as HistoryIcon,
   LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -48,6 +49,7 @@ export function AppSidebar() {
     { title: "Job Tags", url: "/dashboard/job-tags", icon: Tag },
     { title: "Job Titles", url: "/dashboard/job-titles", icon: Briefcase },
     { title: "User Management", url: "/dashboard/users", icon: UserPlus },
+    { title: "History", url: "/dashboard/history", icon: HistoryIcon },
   ];
 
   const isSupervisorOrAbove = role === "supervisor" || role === "coordinator";

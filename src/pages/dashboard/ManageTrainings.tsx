@@ -19,14 +19,28 @@ type TrainingContentType = "link" | "file" | null;
 
 const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
 
+interface ParsedBulkLink {
+  title: string;
+  url: string;
+}
+
 export default function ManageTrainings() {
   const { toast } = useToast();
   const [trainings, setTrainings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkLinksText, setBulkLinksText] = useState("");
+  const [bulkForm, setBulkForm] = useState({
+    description: "",
+    category: "onboarding" as TrainingCategory,
+    frequency: "one_time" as TrainingFrequency,
+  });
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -63,7 +77,13 @@ export default function ManageTrainings() {
     return ALLOWED_EXTENSIONS.find((ext) => lowerName.endsWith(ext)) ?? null;
   };
 
-  const uploadTrainingMaterial = async (file: File) => {
+  const toTrainingTitle = (rawName: string) => {
+    const ext = getFileExtension(rawName);
+    const withoutExt = ext ? rawName.slice(0, -ext.length) : rawName;
+    return withoutExt.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  };
+
+  const uploadTrainingMaterial = async (file: File, titleForPath?: string) => {
     const ext = getFileExtension(file.name);
     if (!ext) {
       toast({
@@ -74,7 +94,7 @@ export default function ManageTrainings() {
       return null;
     }
 
-    const sanitizedName = (form.title || "training").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const sanitizedName = (titleForPath || form.title || "training").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const objectPath = `materials/${Date.now()}-${sanitizedName || "training"}${ext}`;
     const { error } = await supabase.storage.from("training-materials").upload(objectPath, file, {
       contentType: file.type || undefined,
@@ -87,6 +107,147 @@ export default function ManageTrainings() {
     }
 
     return supabase.storage.from("training-materials").getPublicUrl(objectPath).data.publicUrl;
+  };
+
+  const parseBulkLinks = (value: string) => {
+    const lines = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const parsed: ParsedBulkLink[] = [];
+    const errors: string[] = [];
+
+    for (const line of lines) {
+      const separator = line.includes("|") ? "|" : line.includes(",") ? "," : null;
+      if (!separator) {
+        errors.push(`"${line}" (missing separator)`);
+        continue;
+      }
+
+      const idx = line.indexOf(separator);
+      const title = line.slice(0, idx).trim();
+      const url = line.slice(idx + 1).trim();
+
+      if (!title || !url) {
+        errors.push(`"${line}" (title or URL missing)`);
+        continue;
+      }
+
+      try {
+        const parsedUrl = new URL(url);
+        if (!parsedUrl.protocol.startsWith("http")) {
+          errors.push(`"${line}" (URL must start with http/https)`);
+          continue;
+        }
+      } catch {
+        errors.push(`"${line}" (invalid URL)`);
+        continue;
+      }
+
+      parsed.push({ title, url });
+    }
+
+    return { parsed, errors };
+  };
+
+  const resetBulkForm = () => {
+    setBulkFiles([]);
+    setBulkLinksText("");
+    setBulkForm({ description: "", category: "onboarding", frequency: "one_time" });
+  };
+
+  const handleBulkSave = async () => {
+    const hasFiles = bulkFiles.length > 0;
+    const hasLinks = bulkLinksText.trim().length > 0;
+
+    if (!hasFiles && !hasLinks) {
+      toast({
+        variant: "destructive",
+        title: "Nothing to upload",
+        description: "Add files or URL lines before uploading.",
+      });
+      return;
+    }
+
+    setBulkSaving(true);
+    const errors: string[] = [];
+    const trainingPayloads: Array<{
+      title: string;
+      description: string | null;
+      category: TrainingCategory;
+      frequency: TrainingFrequency;
+      content_url: string;
+      content_type: "file" | "link";
+    }> = [];
+
+    if (hasFiles) {
+      for (const file of bulkFiles) {
+        const ext = getFileExtension(file.name);
+        if (!ext) {
+          errors.push(`${file.name} (unsupported extension)`);
+          continue;
+        }
+
+        const trainingTitle = toTrainingTitle(file.name);
+        const uploadedUrl = await uploadTrainingMaterial(file, trainingTitle);
+        if (!uploadedUrl) {
+          errors.push(`${file.name} (upload failed)`);
+          continue;
+        }
+
+        trainingPayloads.push({
+          title: trainingTitle || file.name,
+          description: bulkForm.description || null,
+          category: bulkForm.category,
+          frequency: bulkForm.frequency,
+          content_url: uploadedUrl,
+          content_type: "file",
+        });
+      }
+    }
+
+    if (hasLinks) {
+      const { parsed, errors: parseErrors } = parseBulkLinks(bulkLinksText);
+      errors.push(...parseErrors);
+
+      for (const item of parsed) {
+        trainingPayloads.push({
+          title: item.title,
+          description: bulkForm.description || null,
+          category: bulkForm.category,
+          frequency: bulkForm.frequency,
+          content_url: item.url,
+          content_type: "link",
+        });
+      }
+    }
+
+    if (trainingPayloads.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No trainings created",
+        description: errors.length > 0 ? `Issues: ${errors.slice(0, 3).join("; ")}` : "No valid inputs were provided.",
+      });
+      setBulkSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.from("trainings").insert(trainingPayloads);
+    if (error) {
+      toast({ variant: "destructive", title: "Bulk upload failed", description: error.message });
+      setBulkSaving(false);
+      return;
+    }
+
+    toast({
+      title: `Created ${trainingPayloads.length} training${trainingPayloads.length === 1 ? "" : "s"}`,
+      description: errors.length > 0 ? `${errors.length} item${errors.length === 1 ? "" : "s"} skipped.` : undefined,
+    });
+    setBulkOpen(false);
+    resetBulkForm();
+    await fetchTrainings();
+    setBulkSaving(false);
   };
 
   const handleSave = async () => {
@@ -201,82 +362,156 @@ export default function ManageTrainings() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Manage Trainings</h1>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Training</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit Training" : "Add Training"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-              <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              <div><Label>Category</Label>
-                <Select value={form.category} onValueChange={(v: TrainingCategory) => setForm({ ...form, category: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="onboarding">On-boarding</SelectItem>
-                    <SelectItem value="on_the_job">On-the-Job</SelectItem>
-                    <SelectItem value="sop">SOPs</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Frequency</Label>
-                <Select value={form.frequency} onValueChange={(v: TrainingFrequency) => setForm({ ...form, frequency: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="one_time">One-time</SelectItem>
-                    <SelectItem value="annual">Annual</SelectItem>
-                    <SelectItem value="semi_annual">Semi-annual</SelectItem>
-                    <SelectItem value="as_needed">As Needed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Material URL (optional)</Label>
-                <Input
-                  value={form.content_url}
-                  onChange={(e) => setForm({ ...form, content_url: e.target.value, content_type: e.target.value.trim() ? "link" : null })}
-                  placeholder="https://..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Upload Material File (optional)</Label>
-                <Input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    if (!file) {
-                      setMaterialFile(null);
-                      return;
-                    }
+        <div className="flex items-center gap-2">
+          <Dialog open={bulkOpen} onOpenChange={(o) => { setBulkOpen(o); if (!o) resetBulkForm(); }}>
+            <DialogTrigger asChild>
+              <Button variant="outline">Bulk Upload</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Trainings</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div><Label>Category</Label>
+                    <Select value={bulkForm.category} onValueChange={(v: TrainingCategory) => setBulkForm({ ...bulkForm, category: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="onboarding">On-boarding</SelectItem>
+                        <SelectItem value="on_the_job">On-the-Job</SelectItem>
+                        <SelectItem value="sop">SOPs</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Frequency</Label>
+                    <Select value={bulkForm.frequency} onValueChange={(v: TrainingFrequency) => setBulkForm({ ...bulkForm, frequency: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="one_time">One-time</SelectItem>
+                        <SelectItem value="annual">Annual</SelectItem>
+                        <SelectItem value="semi_annual">Semi-annual</SelectItem>
+                        <SelectItem value="as_needed">As Needed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-                    if (!getFileExtension(file.name)) {
-                      toast({
-                        variant: "destructive",
-                        title: "Unsupported file type",
-                        description: "Allowed files: .ppt, .pptx, .xls, .xlsx, .pdf, .doc, .docx",
-                      });
-                      e.currentTarget.value = "";
-                      setMaterialFile(null);
-                      return;
-                    }
+                <div><Label>Description (optional, applied to all)</Label><Textarea value={bulkForm.description} onChange={(e) => setBulkForm({ ...bulkForm, description: e.target.value })} /></div>
 
-                    setMaterialFile(file);
-                    setForm({ ...form, content_type: "file" });
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Accepted: PowerPoint, Excel, PDF, and Word. Uploading a file will override the URL.
-                </p>
-                {materialFile && <p className="text-xs text-muted-foreground">Selected file: {materialFile.name}</p>}
+                <div className="space-y-2">
+                  <Label>Bulk File Upload</Label>
+                  <Input
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setBulkFiles(files);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload multiple PowerPoint, Excel, PDF, or Word files. Each file becomes one training.
+                  </p>
+                  {bulkFiles.length > 0 && <p className="text-xs text-muted-foreground">{bulkFiles.length} file(s) selected.</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Bulk URL Links</Label>
+                  <Textarea
+                    value={bulkLinksText}
+                    onChange={(e) => setBulkLinksText(e.target.value)}
+                    placeholder={"One training per line:\nBloodborne Pathogens | https://example.com/bbp\nPPE Refresher, https://example.com/ppe"}
+                    className="min-h-32"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Format each line as <code>Title | URL</code> or <code>Title, URL</code>.
+                  </p>
+                </div>
+
+                <Button onClick={handleBulkSave} className="w-full" disabled={bulkSaving}>
+                  {bulkSaving ? "Uploading..." : "Create Trainings in Bulk"}
+                </Button>
               </div>
-              <Button onClick={handleSave} className="w-full" disabled={saving}>{editing ? "Update" : "Create"}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" />Add Training</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editing ? "Edit Training" : "Add Training"}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+                <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+                <div><Label>Category</Label>
+                  <Select value={form.category} onValueChange={(v: TrainingCategory) => setForm({ ...form, category: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="onboarding">On-boarding</SelectItem>
+                      <SelectItem value="on_the_job">On-the-Job</SelectItem>
+                      <SelectItem value="sop">SOPs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Frequency</Label>
+                  <Select value={form.frequency} onValueChange={(v: TrainingFrequency) => setForm({ ...form, frequency: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="one_time">One-time</SelectItem>
+                      <SelectItem value="annual">Annual</SelectItem>
+                      <SelectItem value="semi_annual">Semi-annual</SelectItem>
+                      <SelectItem value="as_needed">As Needed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Material URL (optional)</Label>
+                  <Input
+                    value={form.content_url}
+                    onChange={(e) => setForm({ ...form, content_url: e.target.value, content_type: e.target.value.trim() ? "link" : null })}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Upload Material File (optional)</Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (!file) {
+                        setMaterialFile(null);
+                        return;
+                      }
+
+                      if (!getFileExtension(file.name)) {
+                        toast({
+                          variant: "destructive",
+                          title: "Unsupported file type",
+                          description: "Allowed files: .ppt, .pptx, .xls, .xlsx, .pdf, .doc, .docx",
+                        });
+                        e.currentTarget.value = "";
+                        setMaterialFile(null);
+                        return;
+                      }
+
+                      setMaterialFile(file);
+                      setForm({ ...form, content_type: "file" });
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Accepted: PowerPoint, Excel, PDF, and Word. Uploading a file will override the URL.
+                  </p>
+                  {materialFile && <p className="text-xs text-muted-foreground">Selected file: {materialFile.name}</p>}
+                </div>
+                <Button onClick={handleSave} className="w-full" disabled={saving}>{editing ? "Update" : "Create"}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       <Card>
         <CardContent className="p-0">

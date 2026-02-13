@@ -19,6 +19,7 @@ import JobTags from "./pages/dashboard/JobTags";
 import JobTitles from "./pages/dashboard/JobTitles";
 import UserManagement from "./pages/dashboard/UserManagement";
 import TrainingDetail from "./pages/dashboard/TrainingDetail";
+import History from "./pages/dashboard/History";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="job-tags" element={<JobTags />} />
               <Route path="job-titles" element={<JobTitles />} />
               <Route path="users" element={<UserManagement />} />
+              <Route path="history" element={<History />} />
               <Route path="training/:trainingId" element={<TrainingDetail />} />
             </Route>
             <Route path="*" element={<NotFound />} />

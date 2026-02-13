@@ -18,12 +18,21 @@ interface UserRow {
   net_id: string;
   role: string;
   is_active: boolean;
+  deactivated_at: string | null;
   job_title_id: string | null;
 }
 
 interface JobTitle {
   id: string;
   name: string;
+}
+
+interface RetentionAlert {
+  user_id: string;
+  full_name: string;
+  net_id: string;
+  delete_on: Date;
+  days_left: number;
 }
 
 export default function UserManagement() {
@@ -34,6 +43,7 @@ export default function UserManagement() {
   const [editOpen, setEditOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [retentionAlerts, setRetentionAlerts] = useState<RetentionAlert[]>([]);
   const { toast } = useToast();
 
   // Form state
@@ -47,7 +57,7 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, full_name, net_id, is_active, job_title_id");
+      .select("user_id, full_name, net_id, is_active, deactivated_at, job_title_id");
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const roleMap = new Map<string, string>();
     roles?.forEach((r) => roleMap.set(r.user_id, r.role));
@@ -56,10 +66,30 @@ export default function UserManagement() {
       full_name: p.full_name,
       net_id: p.net_id,
       is_active: p.is_active ?? true,
+      deactivated_at: p.deactivated_at ?? null,
       job_title_id: p.job_title_id,
       role: roleMap.get(p.user_id) || "employee",
     }));
     setUsers(combined);
+    const alerts = combined
+      .filter((user) => !user.is_active && !!user.deactivated_at)
+      .map((user) => {
+        const deactivatedAt = new Date(user.deactivated_at as string);
+        const deleteOn = new Date(deactivatedAt);
+        deleteOn.setFullYear(deleteOn.getFullYear() + 6);
+        const msLeft = deleteOn.getTime() - Date.now();
+        const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+        return {
+          user_id: user.user_id,
+          full_name: user.full_name,
+          net_id: user.net_id,
+          delete_on: deleteOn,
+          days_left: daysLeft,
+        };
+      })
+      .filter((alert) => alert.days_left >= 0 && alert.days_left <= 60)
+      .sort((a, b) => a.days_left - b.days_left);
+    setRetentionAlerts(alerts);
     setLoading(false);
   };
 
@@ -186,6 +216,30 @@ export default function UserManagement() {
           <UserPlus className="mr-2 h-4 w-4" />Add User
         </Button>
       </div>
+
+      {retentionAlerts.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-foreground">Retention Alerts</h2>
+              <p className="text-sm text-muted-foreground">
+                Deactivated users within 60 days of six-year training report deletion.
+              </p>
+              <div className="space-y-2">
+                {retentionAlerts.map((alert) => (
+                  <div key={alert.user_id} className="rounded-md border border-border p-3 text-sm">
+                    <span className="font-medium">{alert.full_name}</span>{" "}
+                    (<span className="text-muted-foreground">{alert.net_id}</span>){" "}
+                    will have training reports deleted in{" "}
+                    <span className="font-medium">{alert.days_left} day{alert.days_left === 1 ? "" : "s"}</span>{" "}
+                    on {alert.delete_on.toLocaleDateString()}.
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-0">
