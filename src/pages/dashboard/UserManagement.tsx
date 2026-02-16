@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +25,7 @@ interface UserRow {
 interface JobTitle {
   id: string;
   name: string;
+  tags: string[];
 }
 
 interface RetentionAlert {
@@ -35,9 +36,14 @@ interface RetentionAlert {
   days_left: number;
 }
 
+const PAGE_SIZE = 500;
+
 export default function UserManagement() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
+  const [filterJobTitleId, setFilterJobTitleId] = useState("all");
+  const [filterTag, setFilterTag] = useState("all");
+  const [sortBy, setSortBy] = useState("name_asc");
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -54,48 +60,114 @@ export default function UserManagement() {
   const [formRole, setFormRole] = useState("employee");
   const [formJobTitleId, setFormJobTitleId] = useState<string>("none");
 
+  const fetchAllProfiles = async () => {
+    const rows: any[] = [];
+    let from = 0;
+
+    while (true) {
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, net_id, is_active, deactivated_at, job_title_id")
+        .order("full_name", { ascending: true })
+        .range(from, to);
+
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+
+      rows.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+
+    return rows;
+  };
+
+  const fetchAllRoles = async () => {
+    const rows: any[] = [];
+    let from = 0;
+
+    while (true) {
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .range(from, to);
+
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+
+      rows.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+
+    return rows;
+  };
+
   const fetchUsers = async () => {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, net_id, is_active, deactivated_at, job_title_id");
-    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-    const roleMap = new Map<string, string>();
-    roles?.forEach((r) => roleMap.set(r.user_id, r.role));
-    const combined: UserRow[] = (profiles || []).map((p: any) => ({
-      user_id: p.user_id,
-      full_name: p.full_name,
-      net_id: p.net_id,
-      is_active: p.is_active ?? true,
-      deactivated_at: p.deactivated_at ?? null,
-      job_title_id: p.job_title_id,
-      role: roleMap.get(p.user_id) || "employee",
-    }));
-    setUsers(combined);
-    const alerts = combined
-      .filter((user) => !user.is_active && !!user.deactivated_at)
-      .map((user) => {
-        const deactivatedAt = new Date(user.deactivated_at as string);
-        const deleteOn = new Date(deactivatedAt);
-        deleteOn.setFullYear(deleteOn.getFullYear() + 6);
-        const msLeft = deleteOn.getTime() - Date.now();
-        const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
-        return {
-          user_id: user.user_id,
-          full_name: user.full_name,
-          net_id: user.net_id,
-          delete_on: deleteOn,
-          days_left: daysLeft,
-        };
-      })
-      .filter((alert) => alert.days_left >= 0 && alert.days_left <= 60)
-      .sort((a, b) => a.days_left - b.days_left);
-    setRetentionAlerts(alerts);
-    setLoading(false);
+    setLoading(true);
+    try {
+      const [profiles, roles] = await Promise.all([fetchAllProfiles(), fetchAllRoles()]);
+      const roleMap = new Map<string, string>();
+      roles.forEach((r) => roleMap.set(r.user_id, r.role));
+
+      const combined: UserRow[] = profiles.map((p: any) => ({
+        user_id: p.user_id,
+        full_name: p.full_name,
+        net_id: p.net_id,
+        is_active: p.is_active ?? true,
+        deactivated_at: p.deactivated_at ?? null,
+        job_title_id: p.job_title_id,
+        role: roleMap.get(p.user_id) || "employee",
+      }));
+
+      setUsers(combined);
+
+      const alerts = combined
+        .filter((user) => !user.is_active && !!user.deactivated_at)
+        .map((user) => {
+          const deactivatedAt = new Date(user.deactivated_at as string);
+          const deleteOn = new Date(deactivatedAt);
+          deleteOn.setFullYear(deleteOn.getFullYear() + 6);
+          const msLeft = deleteOn.getTime() - Date.now();
+          const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+          return {
+            user_id: user.user_id,
+            full_name: user.full_name,
+            net_id: user.net_id,
+            delete_on: deleteOn,
+            days_left: daysLeft,
+          };
+        })
+        .filter((alert) => alert.days_left >= 0 && alert.days_left <= 60)
+        .sort((a, b) => a.days_left - b.days_left);
+      setRetentionAlerts(alerts);
+    } catch (e: any) {
+      toast({ title: "Error loading users", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchJobTitles = async () => {
-    const { data } = await supabase.from("job_titles").select("id, name").order("name");
-    setJobTitles(data || []);
+    const { data, error } = await supabase
+      .from("job_titles")
+      .select("id, name, job_title_tags(job_tag:job_tags(name))")
+      .order("name");
+    if (error) {
+      toast({ title: "Error loading job titles", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const mapped: JobTitle[] = (data || []).map((jt: any) => ({
+      id: jt.id,
+      name: jt.name,
+      tags: (jt.job_title_tags || [])
+        .map((tagRow: any) => tagRow?.job_tag?.name)
+        .filter((name: string | null | undefined): name is string => !!name),
+    }));
+    setJobTitles(mapped);
   };
 
   useEffect(() => {
@@ -203,8 +275,72 @@ export default function UserManagement() {
 
   const jobTitleName = (id: string | null) => {
     if (!id) return "—";
-    return jobTitles.find((jt) => jt.id === id)?.name || "—";
+    return jobTitleById.get(id)?.name || "—";
   };
+
+  const jobTitleById = useMemo(
+    () => new Map(jobTitles.map((jt) => [jt.id, jt])),
+    [jobTitles]
+  );
+
+  const allTags = useMemo(
+    () => Array.from(new Set(jobTitles.flatMap((jt) => jt.tags))).sort((a, b) => a.localeCompare(b)),
+    [jobTitles]
+  );
+
+  const getUserTags = (user: UserRow) => {
+    if (!user.job_title_id) return [];
+    return jobTitleById.get(user.job_title_id)?.tags || [];
+  };
+
+  const getPrimaryTag = (user: UserRow) => {
+    const tags = getUserTags(user);
+    if (tags.length === 0) return "";
+    return [...tags].sort((a, b) => a.localeCompare(b))[0];
+  };
+
+  const displayedUsers = useMemo(() => {
+    const tagsForUser = (user: UserRow) => {
+      if (!user.job_title_id) return [];
+      return jobTitleById.get(user.job_title_id)?.tags || [];
+    };
+    const primaryTagForUser = (user: UserRow) => {
+      const tags = tagsForUser(user);
+      if (tags.length === 0) return "";
+      return [...tags].sort((a, b) => a.localeCompare(b))[0];
+    };
+    const titleNameForUser = (user: UserRow) => {
+      if (!user.job_title_id) return "—";
+      return jobTitleById.get(user.job_title_id)?.name || "—";
+    };
+
+    const filtered = users.filter((user) => {
+      if (filterJobTitleId !== "all" && user.job_title_id !== filterJobTitleId) return false;
+      if (filterTag !== "all" && !tagsForUser(user).includes(filterTag)) return false;
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      const nameCompare = a.full_name.localeCompare(b.full_name);
+      const jobTitleCompare = titleNameForUser(a).localeCompare(titleNameForUser(b));
+      const tagCompare = primaryTagForUser(a).localeCompare(primaryTagForUser(b));
+
+      switch (sortBy) {
+        case "name_desc":
+          return -nameCompare;
+        case "job_title_asc":
+          return jobTitleCompare || nameCompare;
+        case "job_title_desc":
+          return -jobTitleCompare || nameCompare;
+        case "tag_asc":
+          return tagCompare || nameCompare;
+        case "tag_desc":
+          return -tagCompare || nameCompare;
+        default:
+          return nameCompare;
+      }
+    });
+  }, [users, filterJobTitleId, filterTag, sortBy, jobTitleById]);
 
   if (loading) return <div className="text-muted-foreground">Loading...</div>;
 
@@ -242,7 +378,50 @@ export default function UserManagement() {
       )}
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-4 space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Filter by Job Title</Label>
+              <Select value={filterJobTitleId} onValueChange={setFilterJobTitleId}>
+                <SelectTrigger><SelectValue placeholder="All job titles" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All job titles</SelectItem>
+                  {jobTitles.map((jt) => (
+                    <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Filter by Tag</Label>
+              <Select value={filterTag} onValueChange={setFilterTag}>
+                <SelectTrigger><SelectValue placeholder="All tags" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All tags</SelectItem>
+                  {allTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Sort</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+                  <SelectItem value="name_desc">Name (Z-A)</SelectItem>
+                  <SelectItem value="job_title_asc">Job Title (A-Z)</SelectItem>
+                  <SelectItem value="job_title_desc">Job Title (Z-A)</SelectItem>
+                  <SelectItem value="tag_asc">Tag (A-Z)</SelectItem>
+                  <SelectItem value="tag_desc">Tag (Z-A)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Showing {displayedUsers.length} of {users.length} users
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -250,12 +429,13 @@ export default function UserManagement() {
                 <TableHead>NetID</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Job Title</TableHead>
+                <TableHead>Tags</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
+              {displayedUsers.map((u) => (
                 <TableRow key={u.user_id}>
                   <TableCell className="font-medium">{u.full_name}</TableCell>
                   <TableCell>{u.net_id}</TableCell>
@@ -263,6 +443,14 @@ export default function UserManagement() {
                     <Badge className="bg-secondary text-secondary-foreground">{roleLabel(u.role)}</Badge>
                   </TableCell>
                   <TableCell className="text-sm">{jobTitleName(u.job_title_id)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {getUserTags(u).length === 0 && <span className="text-sm text-muted-foreground">—</span>}
+                      {getUserTags(u).map((tag) => (
+                        <Badge key={`${u.user_id}-${tag}`} variant="secondary">{tag}</Badge>
+                      ))}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Switch
