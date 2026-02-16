@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, CheckCircle2, Clock, XCircle, Loader2, ExternalLink, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -37,6 +38,7 @@ export default function TrainingDetail() {
   const [completion, setCompletion] = useState<Completion | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const fetchData = async () => {
     if (!user || !trainingId) return;
@@ -106,6 +108,23 @@ export default function TrainingDetail() {
   if (loading) return <div className="text-muted-foreground">Loading training...</div>;
   if (!training) return <div className="text-muted-foreground">Training not found.</div>;
 
+  const getFileExtension = (url: string) => {
+    const cleanUrl = url.split("?")[0].toLowerCase();
+    const parts = cleanUrl.split(".");
+    return parts.length > 1 ? parts.pop() : null;
+  };
+
+  const getViewerUrl = (url: string) => {
+    const ext = getFileExtension(url);
+    if (ext === "pdf") return url;
+    if (["doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext || "")) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+    }
+    return null;
+  };
+
+  const viewerUrl = training.content_url ? getViewerUrl(training.content_url) : null;
+
   const categoryLabel = (cat: string) => {
     switch (cat) {
       case "onboarding": return "On-boarding";
@@ -145,16 +164,43 @@ export default function TrainingDetail() {
           <CardHeader>
             <CardTitle className="text-base">Training Material</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex gap-2">
+            {training.content_type === "file" && viewerUrl && (
+              <Button variant="default" className="gap-2" onClick={() => setViewerOpen(true)}>
+                <FileText className="h-4 w-4" />
+                View In App
+              </Button>
+            )}
             <Button asChild variant="outline" className="gap-2">
               <a href={training.content_url} target="_blank" rel="noreferrer">
-                {training.content_type === "file" ? <FileText className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-                {training.content_type === "file" ? "Open Document" : "Open Link"}
+                <ExternalLink className="h-4 w-4" />
+                Open in New Tab
               </a>
             </Button>
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Training Material Viewer</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0">
+            {viewerUrl ? (
+              <iframe
+                src={viewerUrl}
+                title="Training material viewer"
+                className="w-full h-full rounded-md border"
+              />
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                This file type cannot be previewed in-app. Use "Open in New Tab".
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Sign-Off Section */}
       <Card>

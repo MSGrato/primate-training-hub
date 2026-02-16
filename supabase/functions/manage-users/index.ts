@@ -85,23 +85,42 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Update job_title_id on the profile if provided
-      if (job_title_id) {
-        await adminClient
-          .from("profiles")
-          .update({ job_title_id })
-          .eq("user_id", newUser.user.id);
+      const userId = newUser.user.id;
+
+      // Ensure profile exists and is populated before returning.
+      const { error: profileErr } = await adminClient
+        .from("profiles")
+        .upsert(
+          {
+            user_id: userId,
+            full_name,
+            net_id,
+            job_title_id: job_title_id ?? null,
+          },
+          { onConflict: "user_id" }
+        );
+      if (profileErr) {
+        return new Response(JSON.stringify({ error: profileErr.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      // If role is not employee, update the role
-      if (role && role !== "employee") {
-        await adminClient
-          .from("user_roles")
-          .update({ role })
-          .eq("user_id", newUser.user.id);
+      // Update role explicitly when provided.
+      const { error: roleErr } = await adminClient
+        .from("user_roles")
+        .upsert(
+          { user_id: userId, role: role ?? "employee" },
+          { onConflict: "user_id" }
+        );
+      if (roleErr) {
+        return new Response(JSON.stringify({ error: roleErr.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      return new Response(JSON.stringify({ success: true, user_id: newUser.user.id }), {
+      return new Response(JSON.stringify({ success: true, user_id: userId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -140,8 +159,7 @@ Deno.serve(async (req) => {
       if (role) {
         const { error: roleErr } = await adminClient
           .from("user_roles")
-          .update({ role })
-          .eq("user_id", user_id);
+          .upsert({ user_id, role }, { onConflict: "user_id" });
         if (roleErr) {
           return new Response(JSON.stringify({ error: roleErr.message }), {
             status: 400,

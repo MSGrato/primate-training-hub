@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "import:users": "node scripts/import-users-from-csv.mjs",
+    "sync:job-descriptions": "node scripts/sync-job-descriptions.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

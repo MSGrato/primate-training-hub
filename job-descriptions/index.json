@@ -1,0 +1,100 @@
+{
+  "category_training_tag_rules": {
+    "husbandry-job-descriptions": "husbandry",
+    "clinical-job-descriptions": "clinical",
+    "bms-job-descriptions": "BMS"
+  },
+  "categories": {
+    "husbandry_job_descriptions": [
+      {
+        "id": "animal-facility-program-supervisor",
+        "title": "Animal Facility Program Supervisor",
+        "last_updated": "2025-05-02",
+        "source": "User provided",
+        "training_tag": "husbandry",
+        "file": "job-descriptions/husbandry-job-descriptions/animal-facility-program-supervisor.md",
+        "date_added": "2026-02-16"
+      },
+      {
+        "id": "animal-technician-1",
+        "title": "Animal Technician 1",
+        "last_updated": "2025-05-02",
+        "source": "User provided",
+        "training_tag": "husbandry",
+        "file": "job-descriptions/husbandry-job-descriptions/animal-technician-1.md",
+        "date_added": "2026-02-16"
+      },
+      {
+        "id": "animal-technician-2",
+        "title": "Animal Technician 2",
+        "last_updated": "2025-05-02",
+        "source": "User provided",
+        "training_tag": "husbandry",
+        "file": "job-descriptions/husbandry-job-descriptions/animal-technician-2.md",
+        "date_added": "2026-02-16"
+      },
+      {
+        "id": "animal-technician-3",
+        "title": "Animal Technician 3",
+        "last_updated": "2025-05-02",
+        "source": "User provided",
+        "training_tag": "husbandry",
+        "file": "job-descriptions/husbandry-job-descriptions/animal-technician-3.md",
+        "date_added": "2026-02-16"
+      },
+      {
+        "id": "animal-technician-supervisor",
+        "title": "Animal Technician Supervisor",
+        "last_updated": "2025-05-02",
+        "source": "User provided",
+        "training_tag": "husbandry",
+        "file": "job-descriptions/husbandry-job-descriptions/animal-technician-supervisor.md",
+        "date_added": "2026-02-16"
+      }
+    ],
+    "clinical_job_descriptions": [
+      {
+        "id": "vet-technician-1",
+        "title": "Vet Technician 1",
+        "source": "User provided (.docx)",
+        "training_tag": "clinical",
+        "file": "job-descriptions/clinical-job-descriptions/vet-technician-1.md",
+        "date_added": "2026-02-16"
+      },
+      {
+        "id": "vet-technician-2",
+        "title": "Vet Technician 2",
+        "source": "User provided (.docx)",
+        "training_tag": "clinical",
+        "file": "job-descriptions/clinical-job-descriptions/vet-technician-2.md",
+        "date_added": "2026-02-16"
+      },
+      {
+        "id": "veterinarian",
+        "title": "Veterinarian",
+        "source": "User provided (image)",
+        "training_tag": "clinical",
+        "file": "job-descriptions/clinical-job-descriptions/veterinarian.md",
+        "date_added": "2026-02-16"
+      }
+    ],
+    "bms_job_descriptions": [
+      {
+        "id": "training-specialist",
+        "title": "Training Specialist",
+        "source": "User provided (.docx)",
+        "training_tag": "BMS",
+        "file": "job-descriptions/bms-job-descriptions/training-specialist.md",
+        "date_added": "2026-02-16"
+      },
+      {
+        "id": "behavior-specialist",
+        "title": "Behavior Specialist",
+        "source": "User provided (.docx)",
+        "training_tag": "BMS",
+        "file": "job-descriptions/bms-job-descriptions/behavior-specialist.md",
+        "date_added": "2026-02-16"
+      }
+    ]
+  }
+}

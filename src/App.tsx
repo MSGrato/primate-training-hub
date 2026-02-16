@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import DashboardLayout from "./components/DashboardLayout";
+import RoleGuard from "./components/RoleGuard";
 import TrainingList from "./pages/dashboard/TrainingList";
 import InProgress from "./pages/dashboard/InProgress";
 import TrainingReport from "./pages/dashboard/TrainingReport";
@@ -41,13 +42,62 @@ const App = () => (
               <Route path="in-progress" element={<InProgress />} />
               <Route path="report" element={<TrainingReport />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="employee-reports" element={<EmployeeReports />} />
-              <Route path="approvals" element={<ApprovalQueue />} />
-              <Route path="manage-trainings" element={<ManageTrainings />} />
-              <Route path="job-tags" element={<JobTags />} />
-              <Route path="job-titles" element={<JobTitles />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="history" element={<History />} />
+              <Route
+                path="employee-reports"
+                element={
+                  <RoleGuard allow={["supervisor", "coordinator"]}>
+                    <EmployeeReports />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="approvals"
+                element={
+                  <RoleGuard allow={["supervisor", "coordinator"]}>
+                    <ApprovalQueue />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="manage-trainings"
+                element={
+                  <RoleGuard allow={["coordinator"]}>
+                    <ManageTrainings />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="job-tags"
+                element={
+                  <RoleGuard allow={["coordinator"]}>
+                    <JobTags />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="job-titles"
+                element={
+                  <RoleGuard allow={["coordinator"]}>
+                    <JobTitles />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <RoleGuard allow={["coordinator"]}>
+                    <UserManagement />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <RoleGuard allow={["coordinator"]}>
+                    <History />
+                  </RoleGuard>
+                }
+              />
               <Route path="training/:trainingId" element={<TrainingDetail />} />
             </Route>
             <Route path="*" element={<NotFound />} />
