@@ -1,0 +1,4 @@
+interface:
+  display_name: "Job Description Tracker"
+  short_description: "Track and tag role-based job descriptions consistently"
+  default_prompt: "Add, update, and validate job descriptions by category and training tag."
