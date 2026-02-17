@@ -1,0 +1,41 @@
+training_id,training_name,category,governing_body,delivery_method,frequency,high_risk_if_expired,training_tags
+T001,UW New Employee Orientation,UW Institutional,UW HR,Online,One-time,No,uw_required;new_hire
+T002,UW Code of Conduct,UW Institutional,UW Compliance,Online,One-time,No,uw_required;ethics
+T003,Sexual Harassment & Title IX Prevention,UW Institutional,UW Title IX,Online,Annual,Yes,uw_required;workplace_conduct
+T004,Information Security Awareness,UW Institutional,UW IT,Online,Annual,Yes,uw_required;data_security
+T005,Privacy Basics (HIPAA/PHI Awareness if applicable),UW Institutional,UW Privacy Office,Online,Annual,Yes,privacy;phi;data_security
+T006,Controlled Access Facility Orientation,Security & Facilities,WaNPRC Security,In-person,One-time,Yes,controlled_access;site_access
+T007,Badge & Access Procedures,Security & Facilities,WaNPRC Security,In-person,One-time,No,controlled_access;site_access
+T008,Visitor & Escort Policy,Security & Facilities,WaNPRC Security,Online,One-time,No,visitor_policy;controlled_access
+T009,Emergency Preparedness: Fire Safety,Emergency Preparedness,UW EH&S,Online,Annual,Yes,emergency;fire_safety
+T010,Emergency Preparedness: Earthquake Readiness,Emergency Preparedness,UW EH&S,Online,Annual,No,emergency;earthquake
+T011,Active Threat Response,Emergency Preparedness,Campus Safety,Online,Biennial,Yes,emergency;security
+T012,Incident Reporting & Stop-Work Authority,Operations & Culture,WaNPRC Ops,Online,Annual,Yes,incident_reporting;safety_culture
+T013,Animal Welfare Concerns: Reporting & Responsibilities,Animal Welfare & IACUC,UW IACUC,Online,One-time,Yes,animal_welfare;iacuc_required
+T014,IACUC Basics for Personnel on Protocols,Animal Welfare & IACUC,UW IACUC,Online,Annual,Yes,iacuc_required;protocols
+T015,Animal Welfare Act (AWA) Overview,Animal Welfare & IACUC,Federal AWA,Online,One-time,Yes,animal_welfare;regulatory
+T016,PHS Policy & The Guide Overview,Animal Welfare & IACUC,PHS/NIH,Online,One-time,Yes,animal_welfare;nih_funded
+T017,Humane Endpoints & Animal Monitoring,Animal Welfare & IACUC,UW IACUC,Online,Annual,Yes,animal_welfare;humane_endpoints
+T018,Nonhuman Primate Safety: Bite/Scratch Prevention,NHP Safety,WaNPRC Safety,In-person,Annual,Yes,nhp_safety;animal_contact
+T019,B-Virus Awareness & Exposure Response,NHP Safety,Occ Health,In-person,Annual,Yes,b_virus;macaque_contact;exposure_response
+T020,Occupational Health Enrollment & Clearance,Occupational Health,Occ Health,In-person,One-time,Yes,occupational_health;animal_contact
+T021,TB Surveillance Program (Annual Screen),Occupational Health,Occ Health,In-person,Annual,Yes,tb_screening;animal_contact
+T022,PPE Fundamentals for Animal Areas,Occupational Health,WaNPRC Safety,In-person,Annual,Yes,ppe;animal_contact
+T023,Bloodborne Pathogens,EH&S,UW EH&S,Online,Annual,Yes,bloodborne_pathogens;sharps
+T024,Sharps Safety,EH&S,UW EH&S,Online,Annual,Yes,sharps;bloodborne_pathogens
+T025,Laboratory Safety Fundamentals,EH&S,UW EH&S,Online,Annual,Yes,lab_safety
+T026,Hazard Communication (HAZCOM),EH&S,OSHA/UW EH&S,Online,Annual,Yes,hazcom;chemicals
+T027,Chemical Hygiene & Spill Response,EH&S,UW EH&S,Online,Annual,Yes,chemicals;spill_response
+T028,Biosafety Fundamentals (BSL Orientation),Biosafety,UW EH&S,Online,Annual,Yes,biosafety;bsl1;bsl2
+T029,Biohazard Waste Handling & Disposal,Biosafety,UW EH&S,Online,Annual,Yes,biohazard_waste
+T030,Decontamination & Disinfection Procedures,Biosafety,WaNPRC Safety,In-person,Annual,Yes,decontamination;biosafety
+T031,Medical Waste Handling (Clinical Areas),Clinical Compliance,UW EH&S,Online,Annual,Yes,medical_waste;clinical
+T032,Anesthesia Safety Basics,Clinical Skills,WaNPRC Clinical,In-person,Annual,Yes,anesthesia;clinical
+T033,Surgical Aseptic Technique Basics,Clinical Skills,WaNPRC Clinical,In-person,Annual,Yes,surgery;aseptic;clinical
+T034,Controlled Substances Handling (If applicable),Clinical Compliance,DEA/Institutional,In-person,Annual,Yes,controlled_substances;clinical
+T035,Radiation Safety (If applicable),Radiation,UW EH&S,Online,Annual,Yes,radiation
+T036,Behavioral Observation & Documentation Standards,Behavior,WaNPRC Behavior,In-person,Annual,Yes,behavior_observation;documentation
+T037,Enrichment & Positive Reinforcement Safety,Behavior,WaNPRC Behavior,In-person,Annual,Yes,enrichment;animal_contact
+T038,Safe Animal Movement & Transfer Procedures,NHP Safety,WaNPRC Ops,In-person,Annual,Yes,animal_movement;animal_contact
+T039,Ergonomics & Injury Prevention (Animal Care),Occupational Health,UW EH&S,Online,Biennial,No,ergonomics;injury_prevention
+T040,Responsible Conduct of Research (RCR) Overview,Research Compliance,UW OR/NIH,Online,Every-4-years,Yes,rcr;research_ethics

@@ -115,19 +115,8 @@ Deno.serve(async (req) => {
     }, { onConflict: "job_title_id,job_tag_id" });
   }
 
-  // Sample trainings
-  const trainings = [
-    { title: "New Employee Orientation", description: "General orientation for all new employees", category: "onboarding", frequency: "one_time" },
-    { title: "Safety & Emergency Procedures", description: "Annual safety training and emergency protocols", category: "onboarding", frequency: "annual" },
-    { title: "Animal Handling Basics", description: "Proper techniques for handling primates", category: "on_the_job", frequency: "one_time" },
-    { title: "Husbandry Daily Procedures", description: "Daily care routines for animal husbandry", category: "on_the_job", frequency: "semi_annual" },
-    { title: "SOP: Cage Cleaning Protocol", description: "Standard operating procedure for cage sanitation", category: "sop", frequency: "annual" },
-    { title: "SOP: Feeding Schedule", description: "Standard operating procedure for animal feeding", category: "sop", frequency: "annual" },
-  ];
-
-  for (const t of trainings) {
-    await supabaseAdmin.from("trainings").upsert(t, { onConflict: "title" }).select().single();
-  }
+  // Do not create ad-hoc sample trainings here.
+  // Trainings should come from the tracked catalog seed under supabase/seeds/.
 
   // Assign trainings to employee
   if (empProfile) {
