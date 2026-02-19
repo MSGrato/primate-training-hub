@@ -9,7 +9,7 @@ Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) =>
-  <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6 border-0 border-none bg-secondary", className)} {...props} />
+  <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6 border-0 border-none py-[10px]", className)} {...props} />
 
 );
 CardHeader.displayName = "CardHeader";
