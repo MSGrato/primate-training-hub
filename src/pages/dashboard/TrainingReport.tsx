@@ -60,19 +60,12 @@ export default function TrainingReport() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Training Report</h1>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Agent Train</CardTitle>
-          <CardDescription>Open Agent Train to run live prompts and export results.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link to="/dashboard/report-agent">Open Agent</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Training Report</h1>
+        <Button asChild>
+          <Link to="/dashboard/report-agent">Agent Train</Link>
+        </Button>
+      </div>
 
       <Card>
         <CardContent className="p-0">
