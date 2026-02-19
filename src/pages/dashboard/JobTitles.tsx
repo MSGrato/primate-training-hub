@@ -123,11 +123,11 @@ export default function JobTitles() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Job Titles</h1>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Title</Button>
+            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Add Title</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>New Job Title</DialogTitle></DialogHeader>
@@ -143,7 +143,7 @@ export default function JobTitles() {
               {tags.length > 0 && (
                 <div className="space-y-2">
                   <Label>Tags</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                  <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2 max-h-40 overflow-y-auto">
                     {tags.map((tag) => (
                       <div key={tag.id} className="flex items-center space-x-2">
                         <Checkbox
@@ -222,7 +222,7 @@ export default function JobTitles() {
             {tags.length > 0 && (
               <div className="space-y-2">
                 <Label>Tags</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2 max-h-40 overflow-y-auto">
                   {tags.map((tag) => (
                     <div key={tag.id} className="flex items-center space-x-2">
                       <Checkbox

@@ -25,14 +25,16 @@ export default function DashboardLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <main className="flex-1 flex flex-col">
-          <header className="h-14 border-b flex items-center px-4 bg-card">
+        <main className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-14 items-center border-b bg-card px-3 sm:px-4">
             <SidebarTrigger />
           </header>
-          <div className="flex-1 p-6">
-            <Outlet />
+          <div className="flex-1 p-3 sm:p-4 lg:p-6">
+            <div className="mx-auto w-full max-w-screen-2xl min-w-0">
+              <Outlet />
+            </div>
           </div>
         </main>
       </div>

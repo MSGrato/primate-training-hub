@@ -66,7 +66,7 @@ export default function TrainingList() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-bold text-foreground text-4xl">Training List</h1>
+      <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Training List</h1>
       {Object.keys(grouped).length === 0 ?
       <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -80,7 +80,7 @@ export default function TrainingList() {
         return (
           <div key={cat} className="space-y-3">
               <h2 className="text-lg font-semibold text-foreground">{categoryLabel(cat)}</h2>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {items.map((a) =>
               <Card key={a.id} className="border border-border bg-card rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer" onClick={() => navigate(`/dashboard/training/${a.training?.id}`)}>
                     <CardHeader className="pb-2">

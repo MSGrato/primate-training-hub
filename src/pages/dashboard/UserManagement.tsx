@@ -418,9 +418,9 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">User Management</h1>
-        <Button onClick={() => { resetForm(); setAddOpen(true); }}>
+        <Button className="w-full sm:w-auto" onClick={() => { resetForm(); setAddOpen(true); }}>
           <UserPlus className="mr-2 h-4 w-4" />Add User
         </Button>
       </div>
@@ -451,7 +451,7 @@ export default function UserManagement() {
 
       <Card>
         <CardContent className="p-4 space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div className="space-y-2">
               <Label>Filter by Job Title</Label>
               <Select value={filterJobTitleId} onValueChange={setFilterJobTitleId}>

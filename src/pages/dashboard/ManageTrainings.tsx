@@ -470,9 +470,9 @@ export default function ManageTrainings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Manage Trainings</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Dialog open={bulkOpen} onOpenChange={(o) => { setBulkOpen(o); if (!o) resetBulkForm(); }}>
             <DialogTrigger asChild>
               <Button variant="outline">Bulk Upload</Button>
@@ -626,7 +626,7 @@ export default function ManageTrainings() {
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative basis-full sm:flex-1 sm:min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search trainings..."
@@ -636,7 +636,7 @@ export default function ManageTrainings() {
           />
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
@@ -647,7 +647,7 @@ export default function ManageTrainings() {
           </SelectContent>
         </Select>
         <Select value={filterFrequency} onValueChange={setFilterFrequency}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="All frequencies" />
           </SelectTrigger>
           <SelectContent>
@@ -663,7 +663,7 @@ export default function ManageTrainings() {
             <X className="mr-1 h-3 w-3" />Clear
           </Button>
         )}
-        <span className="text-sm text-muted-foreground ml-auto">
+        <span className="ml-auto text-sm text-muted-foreground">
           {displayedTrainings.length} of {trainings.length} training{trainings.length !== 1 ? "s" : ""}
         </span>
       </div>

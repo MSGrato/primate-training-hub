@@ -34,7 +34,7 @@ export default function Profile() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
-      <Card className="max-w-lg">
+      <Card className="w-full max-w-lg">
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center">
@@ -47,11 +47,11 @@ export default function Profile() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">Role</span>
             <Badge className="bg-secondary text-secondary-foreground">{roleLabel}</Badge>
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">Job Title</span>
             <span className="text-sm font-medium">{jobTitle || "Not assigned"}</span>
           </div>
@@ -65,9 +65,9 @@ export default function Profile() {
               </div>
             </div>
           )}
-          <div className="flex justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">Email</span>
-            <span className="text-sm">{user?.email}</span>
+            <span className="text-sm break-all sm:text-right">{user?.email}</span>
           </div>
         </CardContent>
       </Card>

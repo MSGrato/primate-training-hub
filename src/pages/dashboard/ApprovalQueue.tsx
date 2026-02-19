@@ -70,7 +70,7 @@ export default function ApprovalQueue() {
                     <TableCell>{c.training?.title}</TableCell>
                     <TableCell>{new Date(c.completed_at).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row">
                         <Button size="sm" onClick={() => handleAction(c.id, "approved")}>Approve</Button>
                         <Button size="sm" variant="destructive" onClick={() => handleAction(c.id, "rejected")}>Reject</Button>
                       </div>

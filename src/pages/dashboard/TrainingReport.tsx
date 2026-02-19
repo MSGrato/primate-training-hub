@@ -60,9 +60,12 @@ export default function TrainingReport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-bold text-foreground text-4xl">Training Report</h1>
-        <Button asChild className="shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 text-base px-6 py-3 h-auto">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Training Report</h1>
+        <Button
+          asChild
+          className="h-auto w-full px-4 py-2 text-base shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl sm:w-auto sm:px-6 sm:py-3"
+        >
           <Link to="/dashboard/report-agent">Agent Train</Link>
         </Button>
       </div>

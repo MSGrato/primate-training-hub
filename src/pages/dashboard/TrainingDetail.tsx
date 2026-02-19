@@ -142,7 +142,7 @@ export default function TrainingDetail() {
 
       <div>
         <h1 className="text-2xl font-bold text-foreground">{training.title}</h1>
-        <div className="flex gap-2 mt-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           <Badge variant="secondary">{categoryLabel(training.category)}</Badge>
           <Badge variant="outline">{training.frequency?.replace("_", " ")}</Badge>
         </div>
@@ -164,7 +164,7 @@ export default function TrainingDetail() {
           <CardHeader>
             <CardTitle className="text-base">Training Material</CardTitle>
           </CardHeader>
-          <CardContent className="flex gap-2">
+          <CardContent className="flex flex-col gap-2 sm:flex-row">
             {training.content_type === "file" && viewerUrl && (
               <Button variant="default" className="gap-2" onClick={() => setViewerOpen(true)}>
                 <FileText className="h-4 w-4" />
