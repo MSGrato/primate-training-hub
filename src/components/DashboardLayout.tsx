@@ -28,7 +28,7 @@ export default function DashboardLayout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <AppSidebar />
+        {!isHomePage && <AppSidebar />}
         <main className="flex min-w-0 flex-1 flex-col">
           {!isHomePage && (
             <header className="flex h-14 items-center border-b bg-card px-3 sm:px-4">
