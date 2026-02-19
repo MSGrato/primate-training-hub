@@ -1,10 +1,12 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function DashboardLayout() {
   const { session, loading } = useAuth();
+  const location = useLocation();
+  const isHome = location.pathname === "/dashboard/home" || location.pathname === "/dashboard";
   const requiresPasswordReset = session?.user.user_metadata?.force_password_reset === true;
 
   if (loading) {
@@ -24,7 +26,7 @@ export default function DashboardLayout() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={!isHome} open={isHome ? false : undefined}>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex min-w-0 flex-1 flex-col">

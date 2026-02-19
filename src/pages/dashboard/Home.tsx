@@ -55,18 +55,18 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {quickLinks.map((item) => (
           <Link key={item.label} to={item.to} className="group">
-            <Card className="h-full transition-colors group-hover:border-primary">
-              <CardHeader className="space-y-2">
-                <div className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <item.icon className="h-4 w-4" />
+            <Card className="h-full border-2 border-border bg-card shadow-lg transition-all duration-200 group-hover:border-primary group-hover:shadow-xl group-hover:-translate-y-1">
+              <CardHeader className="space-y-3">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-sm">
+                  <item.icon className="h-6 w-6" />
                 </div>
-                <CardTitle className="text-lg">{item.label}</CardTitle>
+                <CardTitle className="text-xl">{item.label}</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription>{item.description}</CardDescription>
+                <CardDescription className="text-base">{item.description}</CardDescription>
               </CardContent>
             </Card>
           </Link>
