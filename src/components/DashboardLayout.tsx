@@ -30,7 +30,7 @@ export default function DashboardLayout() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-14 items-center border-b bg-card px-3 sm:px-4">
+          <header className="flex h-14 items-center border-b px-3 sm:px-4 bg-primary">
             <SidebarTrigger />
           </header>
           <div className="flex-1 p-3 sm:p-4 lg:p-6 bg-primary text-primary-foreground">
