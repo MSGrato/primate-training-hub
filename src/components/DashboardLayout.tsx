@@ -1,11 +1,13 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function DashboardLayout() {
   const { session, loading } = useAuth();
+  const location = useLocation();
   const requiresPasswordReset = session?.user.user_metadata?.force_password_reset === true;
+  const isHomePage = location.pathname === "/dashboard/home";
 
   if (loading) {
     return (
@@ -28,9 +30,11 @@ export default function DashboardLayout() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-14 items-center border-b bg-card px-3 sm:px-4">
-            <SidebarTrigger />
-          </header>
+          {!isHomePage && (
+            <header className="flex h-14 items-center border-b bg-card px-3 sm:px-4">
+              <SidebarTrigger />
+            </header>
+          )}
           <div className="flex-1 p-3 sm:p-4 lg:p-6">
             <div className="mx-auto w-full max-w-screen-2xl min-w-0">
               <Outlet />
