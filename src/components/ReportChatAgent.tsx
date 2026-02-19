@@ -49,38 +49,38 @@ type ReportChatAgentProps = {
 const VISIBLE_CHAT_ROWS = 20;
 
 function escapeHtml(value: string) {
-  return value
-    .split("&").join("&amp;")
-    .split("<").join("&lt;")
-    .split(">").join("&gt;")
-    .split('"').join("&quot;")
-    .split("'").join("&#39;");
+  return value.
+  split("&").join("&amp;").
+  split("<").join("&lt;").
+  split(">").join("&gt;").
+  split('"').join("&quot;").
+  split("'").join("&#39;");
 }
 
 export default function ReportChatAgent({
   title = "Report Chat",
-  description = "Generate live training reports using app data and your role-based access scope.",
+  description = "Generate live training reports using app data and your role-based access scope."
 }: ReportChatAgentProps) {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      text: "Ask for reports like: 'Show overdue trainings' or 'Show completion rate by job title'.",
-    },
-  ]);
+  {
+    id: crypto.randomUUID(),
+    role: "assistant",
+    text: "Ask for reports like: 'Show overdue trainings' or 'Show completion rate by job title'."
+  }]
+  );
   const { toast } = useToast();
 
   const quickPrompts = useMemo(
     () => [
-      "Show overdue trainings",
-      "Show due soon trainings in 30 days",
-      "Show completion rate by job title",
-      "Find trainings about biosafety",
-    ],
-    [],
+    "Show overdue trainings",
+    "Show due soon trainings in 30 days",
+    "Show completion rate by job title",
+    "Find trainings about biosafety"],
+
+    []
   );
 
   const renderValue = (value: unknown): string => {
@@ -102,7 +102,7 @@ export default function ReportChatAgent({
       toast({
         title: "Popup blocked",
         description: "Allow popups to export report PDF.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -110,14 +110,14 @@ export default function ReportChatAgent({
     const now = new Date();
     const reportRows = mode === "visible" ? report.rows.slice(0, VISIBLE_CHAT_ROWS) : report.rows;
     const headers = reportRows.length > 0 ? Object.keys(reportRows[0]) : [];
-    const rowsHtml = reportRows
-      .map((row) => {
-        const cells = headers
-          .map((header) => `<td>${escapeHtml(renderValue(row[header]))}</td>`)
-          .join("");
-        return `<tr>${cells}</tr>`;
-      })
-      .join("");
+    const rowsHtml = reportRows.
+    map((row) => {
+      const cells = headers.
+      map((header) => `<td>${escapeHtml(renderValue(row[header]))}</td>`).
+      join("");
+      return `<tr>${cells}</tr>`;
+    }).
+    join("");
 
     const html = `<!doctype html>
 <html>
@@ -152,13 +152,12 @@ export default function ReportChatAgent({
       <span class="chip">Compliance: ${report.highlights.completion_rate}%</span>
     </div>
     ${
-      headers.length > 0
-        ? `<table>
+    headers.length > 0 ?
+    `<table>
             <thead><tr>${headers.map((h) => `<th>${escapeHtml(h.split("_").join(" "))}</th>`).join("")}</tr></thead>
             <tbody>${rowsHtml}</tbody>
-          </table>`
-        : "<p>No rows returned for this report.</p>"
-    }
+          </table>` :
+    "<p>No rows returned for this report.</p>"}
     <script>
       window.onload = () => {
         window.print();
@@ -166,6 +165,7 @@ export default function ReportChatAgent({
     </script>
   </body>
 </html>`;
+
 
     popup.document.open();
     popup.document.write(html);
@@ -181,22 +181,22 @@ export default function ReportChatAgent({
     setChatLoading(true);
 
     const { data, error } = await supabase.functions.invoke("report-chat", {
-      body: { prompt: text },
+      body: { prompt: text }
     });
 
     if (error) {
       setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: `Failed to run report: ${error.message}`,
-        },
-      ]);
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        text: `Failed to run report: ${error.message}`
+      }]
+      );
       toast({
         title: "Report chat failed",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
       setChatLoading(false);
       return;
@@ -205,17 +205,17 @@ export default function ReportChatAgent({
     if (!data || data.error) {
       const message = data?.error ?? "Report chat returned no data.";
       setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: `Failed to run report: ${message}`,
-        },
-      ]);
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        text: `Failed to run report: ${message}`
+      }]
+      );
       toast({
         title: "Report chat failed",
         description: message,
-        variant: "destructive",
+        variant: "destructive"
       });
       setChatLoading(false);
       return;
@@ -223,14 +223,14 @@ export default function ReportChatAgent({
 
     const response = data as ChatResponse;
     setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        text: response.summary,
-        report: response,
-      },
-    ]);
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      text: response.summary,
+      report: response
+    }]
+    );
     setChatLoading(false);
   };
 
@@ -247,103 +247,103 @@ export default function ReportChatAgent({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
-          {quickPrompts.map((item) => (
-            <Button
-              key={item}
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={chatLoading}
-              onClick={() => submitPrompt(item)}
-            >
+          {quickPrompts.map((item) =>
+          <Button
+            key={item}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={chatLoading}
+            onClick={() => submitPrompt(item)}>
+
               {item}
             </Button>
-          ))}
+          )}
         </div>
 
-        <div className="space-y-3 max-h-[480px] overflow-y-auto rounded-md border p-3">
-          {messages.map((message) => (
-            <div key={message.id} className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{message.role === "user" ? "You" : "Agent Train"}</span>
-                {message.report?.intent ? <Badge variant="outline">{message.report.intent.replace("_", " ")}</Badge> : null}
-              </div>
-              <p className="text-sm">{message.text}</p>
+        
 
-              {message.report ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">Users: {message.report.scope.users}</Badge>
-                    <Badge variant="outline">Assignments: {message.report.highlights.total_assignments}</Badge>
-                    <Badge className="bg-destructive text-destructive-foreground">Overdue: {message.report.highlights.overdue}</Badge>
-                    <Badge className="bg-destructive/80 text-destructive-foreground">Due Soon: {message.report.highlights.due_soon}</Badge>
-                    <Badge className="bg-success text-success-foreground">
-                      Compliance: {message.report.highlights.completion_rate}%
-                    </Badge>
-                  </div>
-                  {message.report.rows.length > 0 ? (
-                    <div className="overflow-x-auto rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            {Object.keys(message.report.rows[0]).map((column) => (
-                              <TableHead key={column}>{column.split("_").join(" ")}</TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {message.report.rows.slice(0, VISIBLE_CHAT_ROWS).map((row, index) => (
-                            <TableRow key={`${message.id}-${index}`}>
-                              {Object.keys(message.report.rows[0]).map((column) => (
-                                <TableCell key={`${message.id}-${index}-${column}`}>{renderValue(row[column])}</TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No rows returned for this prompt.</p>
-                  )}
-                  {message.report.suggested_prompts.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => exportReportToPdf(message.report!, "all")}
-                      >
-                        Export All PDF
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => exportReportToPdf(message.report!, "visible")}
-                      >
-                        Export Visible PDF
-                      </Button>
-                      {message.report.suggested_prompts.map((item) => (
-                        <Button
-                          key={`${message.id}-${item}`}
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={chatLoading}
-                          onClick={() => submitPrompt(item)}
-                        >
-                          {item}
-                        </Button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
 
-              <Separator />
-            </div>
-          ))}
-        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         <form className="space-y-2" onSubmit={onSubmit}>
           <Textarea
@@ -351,8 +351,8 @@ export default function ReportChatAgent({
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="Ask for a report. Example: Show overdue trainings for netid employee."
             rows={3}
-            disabled={chatLoading}
-          />
+            disabled={chatLoading} />
+
           <div className="flex justify-end">
             <Button type="submit" disabled={chatLoading || !prompt.trim()}>
               {chatLoading ? "Generating..." : "Run Report"}
@@ -360,6 +360,6 @@ export default function ReportChatAgent({
           </div>
         </form>
       </CardContent>
-    </Card>
-  );
+    </Card>);
+
 }
