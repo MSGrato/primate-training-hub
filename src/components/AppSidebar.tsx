@@ -7,6 +7,7 @@ import {
   Briefcase,
   UserPlus,
   CheckSquare,
+  Search,
   User,
   History as HistoryIcon,
   LogOut,
@@ -36,6 +37,7 @@ export function AppSidebar() {
     { title: "Training List", url: "/dashboard", icon: BookOpen },
     { title: "In Progress", url: "/dashboard/in-progress", icon: ClipboardList },
     { title: "Training Report", url: "/dashboard/report", icon: FileText },
+    { title: "Agent Train", url: "/dashboard/report-agent", icon: Search },
     { title: "My Profile", url: "/dashboard/profile", icon: User },
   ];
 

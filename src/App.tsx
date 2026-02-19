@@ -12,6 +12,7 @@ import RoleGuard from "./components/RoleGuard";
 import TrainingList from "./pages/dashboard/TrainingList";
 import InProgress from "./pages/dashboard/InProgress";
 import TrainingReport from "./pages/dashboard/TrainingReport";
+import ReportAgent from "./pages/dashboard/ReportAgent";
 import Profile from "./pages/dashboard/Profile";
 import EmployeeReports from "./pages/dashboard/EmployeeReports";
 import ApprovalQueue from "./pages/dashboard/ApprovalQueue";
@@ -41,6 +42,7 @@ const App = () => (
               <Route index element={<TrainingList />} />
               <Route path="in-progress" element={<InProgress />} />
               <Route path="report" element={<TrainingReport />} />
+              <Route path="report-agent" element={<ReportAgent />} />
               <Route path="profile" element={<Profile />} />
               <Route
                 path="employee-reports"
