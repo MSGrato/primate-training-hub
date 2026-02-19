@@ -82,7 +82,7 @@ export default function TrainingList() {
               <h2 className="text-lg font-semibold text-foreground">{categoryLabel(cat)}</h2>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {items.map((a) =>
-              <Card key={a.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/dashboard/training/${a.training?.id}`)}>
+              <Card key={a.id} className="border border-border bg-card rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer" onClick={() => navigate(`/dashboard/training/${a.training?.id}`)}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base">{a.training?.title}</CardTitle>
                     </CardHeader>
