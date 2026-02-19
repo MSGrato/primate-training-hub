@@ -16,17 +16,17 @@ export default function TrainingReport() {
   useEffect(() => {
     if (!user) return;
     const fetchReport = async () => {
-      const { data: assignments } = await supabase
-        .from("user_training_assignments")
-        .select("id, training:trainings(id, title, category, frequency)")
-        .eq("user_id", user.id);
+      const { data: assignments } = await supabase.
+      from("user_training_assignments").
+      select("id, training:trainings(id, title, category, frequency)").
+      eq("user_id", user.id);
 
-      const { data: completions } = await supabase
-        .from("training_completions")
-        .select("training_id, completed_at, approved_at, status")
-        .eq("user_id", user.id)
-        .eq("status", "approved")
-        .order("completed_at", { ascending: false });
+      const { data: completions } = await supabase.
+      from("training_completions").
+      select("training_id, completed_at, approved_at, status").
+      eq("user_id", user.id).
+      eq("status", "approved").
+      order("completed_at", { ascending: false });
 
       const completionMap = new Map<string, any>();
       completions?.forEach((c) => {
@@ -39,8 +39,8 @@ export default function TrainingReport() {
         const lastDate = lastCompletion ? new Date(lastCompletion.approved_at || lastCompletion.completed_at) : null;
         let nextDue: Date | null = null;
         if (lastDate && t.frequency !== "one_time" && t.frequency !== "as_needed") {
-          if (t.frequency === "annual") nextDue = addYears(lastDate, 1);
-          else if (t.frequency === "semi_annual") nextDue = addMonths(lastDate, 6);
+          if (t.frequency === "annual") nextDue = addYears(lastDate, 1);else
+          if (t.frequency === "semi_annual") nextDue = addMonths(lastDate, 6);
         }
         const now = new Date();
         const isOverdue = nextDue && isBefore(nextDue, now);
@@ -61,7 +61,7 @@ export default function TrainingReport() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Training Report</h1>
+        <h1 className="font-bold text-foreground text-4xl">Training Report</h1>
         <Button asChild>
           <Link to="/dashboard/report-agent">Agent Train</Link>
         </Button>
@@ -80,39 +80,39 @@ export default function TrainingReport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {report.length === 0 ? (
-                <TableRow>
+              {report.length === 0 ?
+              <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     No trainings assigned.
                   </TableCell>
-                </TableRow>
-              ) : (
-                report.map((r) => (
-                  <TableRow key={r.id}>
+                </TableRow> :
+
+              report.map((r) =>
+              <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.title}</TableCell>
                     <TableCell>{r.category?.replace("_", " ")}</TableCell>
                     <TableCell>{r.lastDate ? r.lastDate.toLocaleDateString() : "Never"}</TableCell>
                     <TableCell>{r.nextDue ? r.nextDue.toLocaleDateString() : r.frequency === "one_time" ? "N/A" : "—"}</TableCell>
                     <TableCell>
-                      {r.isOverdue ? (
-                        <Badge className="bg-destructive text-destructive-foreground">Not Compliant</Badge>
-                      ) : r.isDueSoon ? (
-                        <Badge className="bg-destructive/80 text-destructive-foreground">Due Soon</Badge>
-                      ) : r.isCompliant ? (
-                        <Badge className="bg-success text-success-foreground">Compliant</Badge>
-                      ) : r.lastDate ? (
-                        <Badge className="bg-success text-success-foreground">Compliant</Badge>
-                      ) : (
-                        <Badge variant="outline">Not Started</Badge>
-                      )}
+                      {r.isOverdue ?
+                  <Badge className="bg-destructive text-destructive-foreground">Not Compliant</Badge> :
+                  r.isDueSoon ?
+                  <Badge className="bg-destructive/80 text-destructive-foreground">Due Soon</Badge> :
+                  r.isCompliant ?
+                  <Badge className="bg-success text-success-foreground">Compliant</Badge> :
+                  r.lastDate ?
+                  <Badge className="bg-success text-success-foreground">Compliant</Badge> :
+
+                  <Badge variant="outline">Not Started</Badge>
+                  }
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+              )
+              }
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>);
+
 }
