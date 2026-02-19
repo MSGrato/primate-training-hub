@@ -241,11 +241,7 @@ export default function ReportChatAgent({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         <div className="flex flex-wrap gap-2">
           {quickPrompts.map((item) =>
           <Button
