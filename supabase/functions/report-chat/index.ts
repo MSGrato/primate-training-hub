@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
       .order("completed_at", { ascending: false });
     if (completionsError) throw new Error(completionsError.message);
 
-    const assignments = (assignmentsData ?? []) as AssignmentRow[];
+    const assignments = (assignmentsData ?? []) as unknown as AssignmentRow[];
     const completions = (completionsData ?? []) as CompletionRow[];
 
     const profileByUserId = new Map(scopeProfiles.map((p) => [p.user_id, p]));

@@ -46,11 +46,11 @@ const VISIBLE_CHAT_ROWS = 20;
 
 function escapeHtml(value: string) {
   return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    .split("&").join("&amp;")
+    .split("<").join("&lt;")
+    .split(">").join("&gt;")
+    .split('"').join("&quot;")
+    .split("'").join("&#39;");
 }
 
 export default function TrainingReport() {
@@ -177,7 +177,7 @@ export default function TrainingReport() {
     <h1>Training Report</h1>
     <div class="meta">
       <p><strong>Generated:</strong> ${escapeHtml(now.toLocaleString())}</p>
-      <p><strong>Intent:</strong> ${escapeHtml(report.intent.replaceAll("_", " "))}</p>
+      <p><strong>Intent:</strong> ${escapeHtml(report.intent.split("_").join(" "))}</p>
       <p><strong>Export Mode:</strong> ${escapeHtml(mode === "visible" ? "Visible Rows Only" : "All Rows")}</p>
       <p><strong>Summary:</strong> ${escapeHtml(report.summary)}</p>
     </div>
@@ -191,7 +191,7 @@ export default function TrainingReport() {
     ${
       headers.length > 0
         ? `<table>
-            <thead><tr>${headers.map((h) => `<th>${escapeHtml(h.replaceAll("_", " "))}</th>`).join("")}</tr></thead>
+            <thead><tr>${headers.map((h) => `<th>${escapeHtml(h.split("_").join(" "))}</th>`).join("")}</tr></thead>
             <tbody>${rowsHtml}</tbody>
           </table>`
         : "<p>No rows returned for this report.</p>"
@@ -328,7 +328,7 @@ export default function TrainingReport() {
                           <TableHeader>
                             <TableRow>
                               {Object.keys(message.report.rows[0]).map((column) => (
-                                <TableHead key={column}>{column.replaceAll("_", " ")}</TableHead>
+                                <TableHead key={column}>{column.split("_").join(" ")}</TableHead>
                               ))}
                             </TableRow>
                           </TableHeader>
