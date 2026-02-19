@@ -355,7 +355,7 @@ export default function ReportChatAgent({
 
           <div className="flex justify-end">
             <Button type="submit" disabled={chatLoading || !prompt.trim()} className="px-6 py-2 text-base font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-              {chatLoading ? "Generating..." : "Run Report"}
+              {chatLoading ? "Generating..." : "Ask"}
             </Button>
           </div>
         </form>
