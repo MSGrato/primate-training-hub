@@ -349,7 +349,7 @@ export default function ReportChatAgent({
           <Textarea
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
-            placeholder="Ask for a report. Example: Show overdue trainings for netid employee."
+            placeholder="Ask Agent Train for what you need"
             rows={3}
             disabled={chatLoading} />
 
