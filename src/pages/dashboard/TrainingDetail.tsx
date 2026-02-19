@@ -67,14 +67,67 @@ export default function TrainingDetail() {
     if (!user || !trainingId) return;
     setSubmitting(true);
 
-    const { error } = await supabase.from("training_completions").insert({
+    const submissionPayload = {
       user_id: user.id,
       training_id: trainingId,
       status: "pending" as const,
-    });
+      completed_at: new Date().toISOString(),
+      approved_at: null,
+      approved_by: null,
+    };
+    const { error: insertError } = await supabase.from("training_completions").insert(submissionPayload);
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (!insertError) {
+      toast({ title: "Submitted", description: "Training sent for supervisor approval." });
+      await fetchData();
+      setSubmitting(false);
+      return;
+    }
+
+    const isDuplicateError =
+      insertError.code === "23505" ||
+      insertError.message.toLowerCase().includes("duplicate key");
+
+    if (!isDuplicateError) {
+      toast({ title: "Error", description: insertError.message, variant: "destructive" });
+      setSubmitting(false);
+      return;
+    }
+
+    let completionId = completion?.id ?? null;
+    if (!completionId) {
+      const { data: existingCompletion, error: lookupError } = await supabase
+        .from("training_completions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("training_id", trainingId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lookupError || !existingCompletion) {
+        toast({
+          title: "Error",
+          description: lookupError?.message || "Existing completion record not found.",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+      completionId = existingCompletion.id;
+    }
+
+    const { error: updateError } = await supabase
+      .from("training_completions")
+      .update({
+        status: "pending",
+        completed_at: submissionPayload.completed_at,
+        approved_at: null,
+        approved_by: null,
+      })
+      .eq("id", completionId);
+
+    if (updateError) {
+      toast({ title: "Error", description: updateError.message, variant: "destructive" });
     } else {
       toast({ title: "Submitted", description: "Training sent for supervisor approval." });
       await fetchData();
@@ -83,26 +136,7 @@ export default function TrainingDetail() {
   };
 
   const handleResubmit = async () => {
-    if (!user || !trainingId || !completion) return;
-    setSubmitting(true);
-
-    const { error } = await supabase
-      .from("training_completions")
-      .delete()
-      .eq("id", completion.id);
-
-    if (!error) {
-      await supabase.from("training_completions").insert({
-        user_id: user.id,
-        training_id: trainingId,
-        status: "pending" as const,
-      });
-      toast({ title: "Resubmitted", description: "Training sent for supervisor approval." });
-      await fetchData();
-    } else {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
-    setSubmitting(false);
+    await handleMarkComplete();
   };
 
   if (loading) return <div className="text-muted-foreground">Loading training...</div>;
@@ -124,6 +158,8 @@ export default function TrainingDetail() {
   };
 
   const viewerUrl = training.content_url ? getViewerUrl(training.content_url) : null;
+  const canMarkCompleteAgain =
+    completion?.status === "approved" && training.frequency !== "one_time";
 
   const categoryLabel = (cat: string) => {
     switch (cat) {
@@ -255,10 +291,10 @@ export default function TrainingDetail() {
           </div>
 
           {/* Actions */}
-          {!completion && (
+          {(!completion || canMarkCompleteAgain) && (
             <Button onClick={handleMarkComplete} disabled={submitting} className="mt-2">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Mark Complete
+              {canMarkCompleteAgain ? "Mark Complete Again" : "Mark Complete"}
             </Button>
           )}
           {completion?.status === "rejected" && (
