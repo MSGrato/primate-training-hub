@@ -136,7 +136,7 @@ export default function TrainingDetail() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+      <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/training-list")} className="gap-2">
         <ArrowLeft className="h-4 w-4" /> Back to Training List
       </Button>
 

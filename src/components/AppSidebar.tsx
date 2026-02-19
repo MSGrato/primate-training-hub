@@ -1,4 +1,5 @@
 import {
+  House,
   BookOpen,
   ClipboardList,
   FileText,
@@ -34,7 +35,8 @@ export function AppSidebar() {
   const { profile, role, signOut } = useAuth();
 
   const employeeItems = [
-    { title: "Training List", url: "/dashboard", icon: BookOpen },
+    { title: "Home", url: "/dashboard/home", icon: House },
+    { title: "Training List", url: "/dashboard/training-list", icon: BookOpen },
     { title: "In Progress", url: "/dashboard/in-progress", icon: ClipboardList },
     { title: "Training Report", url: "/dashboard/report", icon: FileText },
     { title: "Agent Train", url: "/dashboard/report-agent", icon: Search },
@@ -78,7 +80,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/dashboard"}
+                      end={item.url === "/dashboard/home"}
                       className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                       activeClassName="bg-sidebar-accent text-secondary font-medium"
                     >

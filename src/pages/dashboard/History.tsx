@@ -210,7 +210,7 @@ export default function History() {
   if (loading) return <div className="text-muted-foreground">Loading history...</div>;
 
   if (role !== "coordinator") {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard/home" replace />;
   }
 
   return (

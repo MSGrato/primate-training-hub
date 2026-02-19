@@ -25,7 +25,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signIn(email, password);
-      navigate("/dashboard");
+      navigate("/dashboard/home");
     } catch (err: unknown) {
       toast({
         variant: "destructive",

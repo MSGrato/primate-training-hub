@@ -9,6 +9,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import DashboardLayout from "./components/DashboardLayout";
 import RoleGuard from "./components/RoleGuard";
+import Home from "./pages/dashboard/Home";
 import TrainingList from "./pages/dashboard/TrainingList";
 import InProgress from "./pages/dashboard/InProgress";
 import TrainingReport from "./pages/dashboard/TrainingReport";
@@ -34,12 +35,14 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard/home" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<TrainingList />} />
+              <Route index element={<Navigate to="/dashboard/home" replace />} />
+              <Route path="home" element={<Home />} />
+              <Route path="training-list" element={<TrainingList />} />
               <Route path="in-progress" element={<InProgress />} />
               <Route path="report" element={<TrainingReport />} />
               <Route path="report-agent" element={<ReportAgent />} />
