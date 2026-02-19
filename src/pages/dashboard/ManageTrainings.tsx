@@ -471,7 +471,7 @@ export default function ManageTrainings() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Manage Trainings</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Manage Trainings</h1>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Dialog open={bulkOpen} onOpenChange={(o) => { setBulkOpen(o); if (!o) resetBulkForm(); }}>
             <DialogTrigger asChild>

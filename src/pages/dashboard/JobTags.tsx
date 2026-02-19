@@ -43,7 +43,7 @@ export default function JobTags() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Job Tags</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Job Tags</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Add Tag</Button>

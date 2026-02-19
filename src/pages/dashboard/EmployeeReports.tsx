@@ -100,7 +100,7 @@ export default function EmployeeReports() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Employee Training Reports</h1>
+      <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Employee Training Reports</h1>
 
       {/* Filter controls */}
       <div className="flex flex-col sm:flex-row gap-3">

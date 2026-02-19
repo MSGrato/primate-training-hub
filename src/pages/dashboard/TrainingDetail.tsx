@@ -141,7 +141,7 @@ export default function TrainingDetail() {
       </Button>
 
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{training.title}</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{training.title}</h1>
         <div className="mt-2 flex flex-wrap gap-2">
           <Badge variant="secondary">{categoryLabel(training.category)}</Badge>
           <Badge variant="outline">{training.frequency?.replace("_", " ")}</Badge>
@@ -211,7 +211,7 @@ export default function TrainingDetail() {
           {/* Employee Sign-Off */}
           <div className="flex items-start gap-3">
             {completion ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+              <CheckCircle2 className="h-5 w-5 text-success mt-0.5 shrink-0" />
             ) : (
               <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 mt-0.5 shrink-0" />
             )}
@@ -230,11 +230,11 @@ export default function TrainingDetail() {
           {/* Supervisor Sign-Off */}
           <div className="flex items-start gap-3">
             {completion?.status === "approved" ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+              <CheckCircle2 className="h-5 w-5 text-success mt-0.5 shrink-0" />
             ) : completion?.status === "rejected" ? (
               <XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
             ) : completion?.status === "pending" ? (
-              <Clock className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+              <Clock className="h-5 w-5 text-secondary mt-0.5 shrink-0" />
             ) : (
               <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 mt-0.5 shrink-0" />
             )}
@@ -268,12 +268,12 @@ export default function TrainingDetail() {
             </Button>
           )}
           {completion?.status === "pending" && (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 mt-2">
+            <Badge className="bg-secondary/20 text-secondary border-secondary/30 mt-2">
               Awaiting Supervisor Approval
             </Badge>
           )}
           {completion?.status === "approved" && (
-            <Badge className="bg-green-500/10 text-green-600 border-green-500/20 mt-2">
+            <Badge className="bg-success/10 text-success border-success/20 mt-2">
               Completed
             </Badge>
           )}

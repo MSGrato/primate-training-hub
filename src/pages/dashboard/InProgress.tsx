@@ -37,7 +37,7 @@ export default function InProgress() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sm:text-4xl">In Progress</h1>
+      <h1 className="text-2xl font-bold text-foreground sm:text-3xl">In Progress</h1>
       {completions.length === 0 ?
       <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -48,7 +48,7 @@ export default function InProgress() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {completions.map((c) =>
-        <Card key={c.id}>
+        <Card key={c.id} className="border border-border bg-card rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{c.training?.title}</CardTitle>
               </CardHeader>

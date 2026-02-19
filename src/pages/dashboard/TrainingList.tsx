@@ -66,7 +66,7 @@ export default function TrainingList() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Training List</h1>
+      <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Training List</h1>
       {Object.keys(grouped).length === 0 ?
       <Card>
           <CardContent className="py-12 text-center text-muted-foreground">

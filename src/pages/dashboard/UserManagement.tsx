@@ -402,7 +402,7 @@ export default function UserManagement() {
   if (fetchError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">User Management</h1>
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-3">
@@ -419,7 +419,7 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">User Management</h1>
         <Button className="w-full sm:w-auto" onClick={() => { resetForm(); setAddOpen(true); }}>
           <UserPlus className="mr-2 h-4 w-4" />Add User
         </Button>

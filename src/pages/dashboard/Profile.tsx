@@ -33,7 +33,7 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
+      <h1 className="text-2xl font-bold text-foreground sm:text-3xl">My Profile</h1>
       <Card className="w-full max-w-lg">
         <CardHeader>
           <div className="flex items-center gap-4">
