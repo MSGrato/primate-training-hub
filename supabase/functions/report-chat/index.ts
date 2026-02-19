@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 type AppRole = "employee" | "supervisor" | "coordinator";
-type Intent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title";
+type Intent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search";
 
 type ScopeProfile = {
   user_id: string;
@@ -39,6 +39,16 @@ type CompletionRow = {
 function parseIntent(prompt: string): Intent {
   const p = prompt.toLowerCase();
 
+  if (
+    p.includes("find training") ||
+    p.includes("find trainings") ||
+    p.includes("search training") ||
+    p.includes("search trainings") ||
+    p.includes("look up training") ||
+    p.startsWith("training:")
+  ) {
+    return "training_search";
+  }
   if (p.includes("by job title") || p.includes("job title breakdown") || p.includes("title breakdown")) {
     return "by_job_title";
   }
@@ -53,6 +63,21 @@ function parseIntent(prompt: string): Intent {
   }
 
   return "summary";
+}
+
+function extractTrainingSearchQuery(prompt: string): string {
+  const trimmed = prompt.trim();
+  const lowered = trimmed.toLowerCase();
+
+  if (lowered.startsWith("training:")) {
+    return trimmed.slice("training:".length).trim();
+  }
+
+  const pattern = /(?:find|search|look up)\s+(?:for\s+)?(?:training|trainings)(?:\s+(?:about|for|with))?\s+(.+)/i;
+  const match = trimmed.match(pattern);
+  if (match?.[1]) return match[1].trim();
+
+  return trimmed;
 }
 
 function parseDaysWindow(prompt: string): number {
@@ -181,6 +206,78 @@ Deno.serve(async (req) => {
     const dueSoonDays = parseDaysWindow(prompt);
     const requestedNetId = parseNetIdFilter(prompt);
     const now = new Date();
+
+    if (intent === "training_search") {
+      const query = extractTrainingSearchQuery(prompt).toLowerCase();
+      const queryTokens = query
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2);
+
+      const { data: trainings, error: trainingsError } = await supabase
+        .from("trainings")
+        .select("id,title,description,category,frequency")
+        .order("title", { ascending: true });
+      if (trainingsError) throw new Error(trainingsError.message);
+
+      const matches = (trainings ?? [])
+        .map((training) => {
+          const haystack = [
+            training.title ?? "",
+            training.description ?? "",
+            training.category ?? "",
+            training.frequency ?? "",
+          ]
+            .join(" ")
+            .toLowerCase();
+
+          const score = queryTokens.length === 0
+            ? 1
+            : queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
+
+          return {
+            id: training.id,
+            title: training.title,
+            description: training.description,
+            category: training.category,
+            frequency: training.frequency,
+            match_score: score,
+          };
+        })
+        .filter((row) => row.match_score > 0)
+        .sort((a, b) => b.match_score - a.match_score || a.title.localeCompare(b.title))
+        .slice(0, 200);
+
+      return new Response(
+        JSON.stringify({
+          intent,
+          summary: queryTokens.length === 0
+            ? `Showing ${matches.length} trainings from the catalog.`
+            : `Found ${matches.length} trainings matching "${query}".`,
+          scope: {
+            role: callerRole,
+            users: 0,
+            dueSoonDays,
+            net_id_filter: null,
+          },
+          highlights: {
+            total_assignments: matches.length,
+            compliant: 0,
+            overdue: 0,
+            due_soon: 0,
+            not_started: 0,
+            completion_rate: 0,
+          },
+          rows: matches,
+          suggested_prompts: [
+            "Find trainings about biosafety",
+            "Find trainings for anesthesia",
+            "Show overdue trainings",
+          ],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     let scopeProfiles: ScopeProfile[] = [];
 
@@ -366,6 +463,7 @@ Deno.serve(async (req) => {
       due_soon: `Found ${totals.due_soon} assignments due within ${dueSoonDays} days.`,
       completion_rate: `Overall compliance is ${completionRate}% across ${totals.total_assignments} assignments.`,
       by_job_title: `Generated job-title completion breakdown for ${jobTitleBreakdown.length} titles in scope.`,
+      training_search: "Training search complete.",
     };
 
     return new Response(

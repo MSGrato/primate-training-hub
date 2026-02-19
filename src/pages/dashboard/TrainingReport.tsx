@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
-type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title";
+type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search";
 
 type ChatRow = Record<string, unknown>;
 
@@ -116,6 +116,7 @@ export default function TrainingReport() {
       "Show overdue trainings",
       "Show due soon trainings in 30 days",
       "Show completion rate by job title",
+      "Find trainings about biosafety",
     ],
     [],
   );
