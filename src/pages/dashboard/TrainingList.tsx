@@ -39,7 +39,7 @@ export default function TrainingList() {
   const categoryOrder = ["onboarding", "on_the_job", "sop", "other"];
   const categoryLabel = (cat: string) => {
     switch (cat) {
-      case "onboarding":return "  On-boarding";
+      case "onboarding":return "On-boarding";
       case "on_the_job":return "On-the-Job";
       case "sop":return "SOPs";
       default:return cat;
@@ -66,7 +66,7 @@ export default function TrainingList() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Training List</h1>
+      <h1 className="font-bold text-foreground text-4xl">Training List</h1>
       {Object.keys(grouped).length === 0 ?
       <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -79,7 +79,7 @@ export default function TrainingList() {
         const items = grouped[cat];
         return (
           <div key={cat} className="space-y-3">
-              <h2 className="text-lg font-semibold bg-secondary text-primary-foreground">{categoryLabel(cat)}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{categoryLabel(cat)}</h2>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {items.map((a) =>
               <Card key={a.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/dashboard/training/${a.training?.id}`)}>
