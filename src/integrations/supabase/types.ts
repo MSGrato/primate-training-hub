@@ -230,6 +230,7 @@ export type Database = {
           id: string
           title: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           category: Database["public"]["Enums"]["training_category"]
@@ -241,6 +242,7 @@ export type Database = {
           id?: string
           title: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["training_category"]
@@ -252,6 +254,7 @@ export type Database = {
           id?: string
           title?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }

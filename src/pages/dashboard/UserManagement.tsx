@@ -18,7 +18,6 @@ interface UserRow {
   net_id: string;
   role: string;
   is_active: boolean;
-  deactivated_at: string | null;
   job_title_id: string | null;
 }
 
@@ -69,7 +68,7 @@ export default function UserManagement() {
       const to = from + PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from("profiles")
-        .select("user_id, full_name, net_id, is_active, deactivated_at, job_title_id")
+        .select("user_id, full_name, net_id, is_active, job_title_id")
         .order("full_name", { ascending: true })
         .range(from, to);
 
@@ -117,7 +116,7 @@ export default function UserManagement() {
       } catch {
         const { data, error } = await supabase
           .from("profiles")
-          .select("user_id, full_name, net_id, is_active, deactivated_at, job_title_id")
+          .select("user_id, full_name, net_id, is_active, job_title_id")
           .order("full_name", { ascending: true });
         if (error) throw error;
         profiles = data || [];
@@ -142,32 +141,13 @@ export default function UserManagement() {
         full_name: p.full_name,
         net_id: p.net_id,
         is_active: p.is_active ?? true,
-        deactivated_at: p.deactivated_at ?? null,
         job_title_id: p.job_title_id,
         role: roleMap.get(p.user_id) || "employee",
       }));
 
       setUsers(combined);
 
-      const alerts = combined
-        .filter((user) => !user.is_active && !!user.deactivated_at)
-        .map((user) => {
-          const deactivatedAt = new Date(user.deactivated_at as string);
-          const deleteOn = new Date(deactivatedAt);
-          deleteOn.setFullYear(deleteOn.getFullYear() + 6);
-          const msLeft = deleteOn.getTime() - Date.now();
-          const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
-          return {
-            user_id: user.user_id,
-            full_name: user.full_name,
-            net_id: user.net_id,
-            delete_on: deleteOn,
-            days_left: daysLeft,
-          };
-        })
-        .filter((alert) => alert.days_left >= 0 && alert.days_left <= 60)
-        .sort((a, b) => a.days_left - b.days_left);
-      setRetentionAlerts(alerts);
+      setRetentionAlerts([]);
     } catch (e: any) {
       setFetchError(e.message || "An unknown error occurred while loading users.");
       toast({ title: "Error loading users", description: e.message, variant: "destructive" });
