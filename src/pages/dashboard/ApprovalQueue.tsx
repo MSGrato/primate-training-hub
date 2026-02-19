@@ -43,7 +43,7 @@ export default function ApprovalQueue() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Approval Queue</h1>
+      <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Approval Queue</h1>
       <Card>
         <CardContent className="p-0">
           <Table>

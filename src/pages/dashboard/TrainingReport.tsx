@@ -61,7 +61,7 @@ export default function TrainingReport() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Training Report</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Training Report</h1>
         <Button
           asChild
           className="h-auto w-full px-4 py-2 text-base shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl sm:w-auto sm:px-6 sm:py-3"
