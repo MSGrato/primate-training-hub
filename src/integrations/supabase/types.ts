@@ -307,6 +307,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_required_trainings_for_all_users: { Args: never; Returns: number }
+      assign_required_trainings_for_user: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
