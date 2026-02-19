@@ -56,9 +56,11 @@ export default function Home() {
 
       <div className="relative z-10 space-y-8 max-w-screen-2xl mx-auto">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold sm:text-4xl text-secondary drop-shadow-md">Home</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl text-secondary drop-shadow-md">
+            Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}
+          </h1>
           <p className="text-primary-foreground/80 text-lg">
-            Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}. Choose where to go from the navigation or quick links below.
+            Choose where to go from the navigation or quick links below.
           </p>
         </div>
 
