@@ -62,7 +62,7 @@ export default function TrainingReport() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-bold text-foreground text-4xl">Training Report</h1>
-        <Button asChild>
+        <Button asChild className="shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 text-base px-6 py-3 h-auto">
           <Link to="/dashboard/report-agent">Agent Train</Link>
         </Button>
       </div>
