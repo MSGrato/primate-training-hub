@@ -50,6 +50,7 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [retentionAlerts, setRetentionAlerts] = useState<RetentionAlert[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Form state
@@ -92,6 +93,7 @@ export default function UserManagement() {
       const { data, error } = await supabase
         .from("user_roles")
         .select("user_id, role")
+        .order("user_id", { ascending: true })
         .range(from, to);
 
       if (error) throw error;
@@ -107,6 +109,7 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const [profiles, roles] = await Promise.all([fetchAllProfiles(), fetchAllRoles()]);
       const roleMap = new Map<string, string>();
@@ -144,6 +147,7 @@ export default function UserManagement() {
         .sort((a, b) => a.days_left - b.days_left);
       setRetentionAlerts(alerts);
     } catch (e: any) {
+      setFetchError(e.message || "An unknown error occurred while loading users.");
       toast({ title: "Error loading users", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -343,6 +347,23 @@ export default function UserManagement() {
   }, [users, filterJobTitleId, filterTag, sortBy, jobTitleById]);
 
   if (loading) return <div className="text-muted-foreground">Loading...</div>;
+
+  if (fetchError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <p className="font-medium text-destructive">Failed to load users</p>
+              <p className="text-sm text-muted-foreground break-all">{fetchError}</p>
+              <Button variant="outline" onClick={fetchUsers}>Retry</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
