@@ -47,30 +47,38 @@ export default function Home() {
 
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold sm:text-4xl text-secondary">Home</h1>
-        <p className="text-secondary">
-          Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}. Choose where to go from the navigation or quick links below.
-        </p>
-      </div>
+    <div className="relative min-h-[calc(100vh-3.5rem)] -m-3 sm:-m-4 lg:-m-6 p-6 sm:p-8 lg:p-12 overflow-hidden">
+      {/* Decorative background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-primary/70" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-secondary/15 blur-3xl -translate-y-1/2 translate-x-1/4" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-secondary/10 blur-3xl translate-y-1/3 -translate-x-1/4" />
+      <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] rounded-full bg-primary-foreground/5 blur-2xl -translate-x-1/2 -translate-y-1/2" />
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {quickLinks.map((item) =>
-        <Link key={item.label} to={item.to} className="group">
-            <Card className="h-full border-2 border-border bg-card shadow-lg transition-all duration-200 group-hover:border-primary group-hover:shadow-xl group-hover:-translate-y-1">
-              <CardHeader className="space-y-3">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-sm">
-                  <item.icon className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-xl">{item.label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">{item.description}</CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
-        )}
+      <div className="relative z-10 space-y-8 max-w-screen-2xl mx-auto">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold sm:text-4xl text-secondary drop-shadow-md">Home</h1>
+          <p className="text-primary-foreground/80 text-lg">
+            Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}. Choose where to go from the navigation or quick links below.
+          </p>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {quickLinks.map((item) =>
+          <Link key={item.label} to={item.to} className="group">
+              <Card className="h-full border border-primary-foreground/10 bg-primary-foreground/10 backdrop-blur-sm shadow-lg transition-all duration-200 group-hover:bg-primary-foreground/20 group-hover:shadow-xl group-hover:-translate-y-1 group-hover:border-secondary/40">
+                <CardHeader className="space-y-3">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/20 text-secondary shadow-sm">
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-xl text-primary-foreground">{item.label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-base text-primary-foreground/70">{item.description}</CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+        </div>
       </div>
     </div>);
 
