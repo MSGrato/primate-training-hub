@@ -5,7 +5,6 @@ export default function ReportAgent() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Agent Train</h1>
       <ReportChatAgent
-        title="Agent Train"
         description="Generate live training reports and search training data using your role-based access scope." />
 
     </div>);
