@@ -65,7 +65,7 @@ export default function Home() {
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {quickLinks.map((item) =>
           <Link key={item.label} to={item.to} className="group">
-              <Card className="h-full border border-primary-foreground/10 bg-primary-foreground/10 backdrop-blur-sm shadow-lg transition-all duration-200 group-hover:bg-primary-foreground/20 group-hover:shadow-xl group-hover:-translate-y-1 group-hover:border-secondary/40">
+              <Card className="h-full border border-primary-foreground/10 bg-primary-foreground/10 backdrop-blur-sm shadow-sm transition-all duration-200 group-hover:bg-primary-foreground/20 group-hover:shadow-md group-hover:-translate-y-1 group-hover:border-secondary/40">
                 <CardHeader className="space-y-3">
                   <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/20 text-secondary shadow-sm">
                     <item.icon className="h-6 w-6" />
