@@ -13,11 +13,11 @@ export default function InProgress() {
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
-      const { data } = await supabase
-        .from("training_completions")
-        .select("id, status, completed_at, training:trainings(id, title, category)")
-        .eq("user_id", user.id)
-        .eq("status", "pending");
+      const { data } = await supabase.
+      from("training_completions").
+      select("id, status, completed_at, training:trainings(id, title, category)").
+      eq("user_id", user.id).
+      eq("status", "pending");
       setCompletions(data || []);
       setLoading(false);
     };
@@ -26,10 +26,10 @@ export default function InProgress() {
 
   const statusColor = (s: string) => {
     switch (s) {
-      case "pending": return "bg-secondary text-secondary-foreground";
-      case "approved": return "bg-success text-success-foreground";
-      case "rejected": return "bg-destructive text-destructive-foreground";
-      default: return "";
+      case "pending":return "bg-secondary text-secondary-foreground";
+      case "approved":return "bg-success text-success-foreground";
+      case "rejected":return "bg-destructive text-destructive-foreground";
+      default:return "";
     }
   };
 
@@ -37,18 +37,18 @@ export default function InProgress() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">In Progress</h1>
-      {completions.length === 0 ? (
-        <Card>
+      <h1 className="font-bold text-foreground text-4xl">In Progress</h1>
+      {completions.length === 0 ?
+      <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <ClipboardList className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
             <p>No trainings in progress.</p>
           </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {completions.map((c) => (
-            <Card key={c.id}>
+        </Card> :
+
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {completions.map((c) =>
+        <Card key={c.id}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{c.training?.title}</CardTitle>
               </CardHeader>
@@ -61,9 +61,9 @@ export default function InProgress() {
                 </Badge>
               </CardContent>
             </Card>
-          ))}
+        )}
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
