@@ -59,6 +59,26 @@ export default function UserManagement() {
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState("employee");
   const [formJobTitleId, setFormJobTitleId] = useState<string>("none");
+  const [formSupervisorId, setFormSupervisorId] = useState<string>("none");
+
+  // Supervisors list for assignment
+  const supervisors = useMemo(
+    () => users.filter((u) => u.role === "supervisor" || u.role === "coordinator"),
+    [users]
+  );
+
+  // Supervisor mappings
+  const [supervisorMappings, setSupervisorMappings] = useState<Map<string, string>>(new Map());
+
+  const fetchSupervisorMappings = async () => {
+    const { data, error } = await supabase
+      .from("supervisor_employee_mappings")
+      .select("employee_id, supervisor_id");
+    if (error) return;
+    const map = new Map<string, string>();
+    (data || []).forEach((m: any) => map.set(m.employee_id, m.supervisor_id));
+    setSupervisorMappings(map);
+  };
 
   const fetchAllProfiles = async () => {
     const rows: any[] = [];
@@ -179,6 +199,7 @@ export default function UserManagement() {
   useEffect(() => {
     fetchUsers();
     fetchJobTitles();
+    fetchSupervisorMappings();
   }, []);
 
   const roleLabel = (r: string) => {
@@ -196,6 +217,22 @@ export default function UserManagement() {
     setFormPassword("");
     setFormRole("employee");
     setFormJobTitleId("none");
+    setFormSupervisorId("none");
+  };
+
+  const saveSupervisorMapping = async (employeeId: string, supervisorId: string | null) => {
+    // Delete existing mapping
+    await supabase
+      .from("supervisor_employee_mappings")
+      .delete()
+      .eq("employee_id", employeeId);
+
+    // Insert new mapping if supervisor selected
+    if (supervisorId) {
+      await supabase
+        .from("supervisor_employee_mappings")
+        .insert({ employee_id: employeeId, supervisor_id: supervisorId });
+    }
   };
 
   const invokeManageUsers = async (body: Record<string, unknown>) => {
@@ -212,7 +249,7 @@ export default function UserManagement() {
     }
     setSubmitting(true);
     try {
-      await invokeManageUsers({
+      const result = await invokeManageUsers({
         action: "create",
         email: formEmail.trim(),
         password: formPassword,
@@ -221,10 +258,15 @@ export default function UserManagement() {
         role: formRole,
         job_title_id: formJobTitleId !== "none" ? formJobTitleId : null,
       });
+      // Save supervisor mapping if selected
+      if (formSupervisorId !== "none" && result?.user_id) {
+        await saveSupervisorMapping(result.user_id, formSupervisorId);
+      }
       toast({ title: "User created successfully" });
       setAddOpen(false);
       resetForm();
       await fetchUsers();
+      await fetchSupervisorMappings();
     } catch (e: any) {
       toast({ title: "Error creating user", description: e.message, variant: "destructive" });
     } finally {
@@ -244,11 +286,17 @@ export default function UserManagement() {
         role: formRole,
         job_title_id: formJobTitleId !== "none" ? formJobTitleId : null,
       });
+      // Save supervisor mapping
+      await saveSupervisorMapping(
+        selectedUser.user_id,
+        formSupervisorId !== "none" ? formSupervisorId : null
+      );
       toast({ title: "User updated successfully" });
       setEditOpen(false);
       resetForm();
       setSelectedUser(null);
       await fetchUsers();
+      await fetchSupervisorMappings();
     } catch (e: any) {
       toast({ title: "Error updating user", description: e.message, variant: "destructive" });
     } finally {
@@ -276,6 +324,7 @@ export default function UserManagement() {
     setFormNetId(u.net_id);
     setFormRole(u.role);
     setFormJobTitleId(u.job_title_id || "none");
+    setFormSupervisorId(supervisorMappings.get(u.user_id) || "none");
     setEditOpen(true);
   };
 
@@ -544,6 +593,18 @@ export default function UserManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Supervisor</Label>
+              <Select value={formSupervisorId} onValueChange={setFormSupervisorId}>
+                <SelectTrigger><SelectValue placeholder="Select supervisor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {supervisors.map((s) => (
+                    <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
@@ -589,6 +650,18 @@ export default function UserManagement() {
                   <SelectItem value="none">None</SelectItem>
                   {jobTitles.map((jt) => (
                     <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Supervisor</Label>
+              <Select value={formSupervisorId} onValueChange={setFormSupervisorId}>
+                <SelectTrigger><SelectValue placeholder="Select supervisor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {supervisors.map((s) => (
+                    <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
