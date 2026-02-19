@@ -111,7 +111,29 @@ export default function UserManagement() {
     setLoading(true);
     setFetchError(null);
     try {
-      const [profiles, roles] = await Promise.all([fetchAllProfiles(), fetchAllRoles()]);
+      let profiles: any[] = [];
+      try {
+        profiles = await fetchAllProfiles();
+      } catch {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, net_id, is_active, deactivated_at, job_title_id")
+          .order("full_name", { ascending: true });
+        if (error) throw error;
+        profiles = data || [];
+      }
+
+      let roles: any[] = [];
+      try {
+        roles = await fetchAllRoles();
+      } catch (roleError: any) {
+        toast({
+          title: "Warning loading roles",
+          description: roleError.message || "Unable to load roles. Showing users with default role labels.",
+          variant: "destructive",
+        });
+      }
+
       const roleMap = new Map<string, string>();
       roles.forEach((r) => roleMap.set(r.user_id, r.role));
 
