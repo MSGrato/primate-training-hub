@@ -39,7 +39,7 @@ export default function TrainingList() {
   const categoryOrder = ["onboarding", "on_the_job", "sop", "other"];
   const categoryLabel = (cat: string) => {
     switch (cat) {
-      case "onboarding":return "On-boarding";
+      case "onboarding":return "  On-boarding";
       case "on_the_job":return "On-the-Job";
       case "sop":return "SOPs";
       default:return cat;
