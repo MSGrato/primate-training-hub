@@ -13,8 +13,8 @@ export default function DashboardLayout() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+      </div>);
+
   }
 
   if (!session) {
@@ -33,13 +33,13 @@ export default function DashboardLayout() {
           <header className="flex h-14 items-center border-b bg-card px-3 sm:px-4">
             <SidebarTrigger />
           </header>
-          <div className="flex-1 p-3 sm:p-4 lg:p-6">
+          <div className="flex-1 p-3 sm:p-4 lg:p-6 bg-primary text-primary-foreground">
             <div className="mx-auto w-full max-w-screen-2xl min-w-0">
               <Outlet />
             </div>
           </div>
         </main>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>);
+
 }
