@@ -36,6 +36,7 @@ export default function TrainingList() {
     fetchAssignments();
   }, [user]);
 
+  const categoryOrder = ["onboarding", "on_the_job", "sop", "other"];
   const categoryLabel = (cat: string) => {
     switch (cat) {
       case "onboarding": return "On-boarding";
@@ -52,6 +53,15 @@ export default function TrainingList() {
     return acc;
   }, {});
 
+  // Sort trainings alphabetically within each category
+  Object.values(grouped).forEach((items) =>
+    items.sort((a, b) => (a.training?.title || "").localeCompare(b.training?.title || ""))
+  );
+
+  const sortedCategories = Object.keys(grouped).sort(
+    (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b)
+  );
+
   if (loading) return <div className="text-muted-foreground">Loading trainings...</div>;
 
   return (
@@ -65,24 +75,27 @@ export default function TrainingList() {
           </CardContent>
         </Card>
       ) : (
-        Object.entries(grouped).map(([cat, items]) => (
-          <div key={cat} className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground">{categoryLabel(cat)}</h2>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {items.map((a) => (
-                <Card key={a.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/dashboard/training/${a.training?.id}`)}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{a.training?.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{a.training?.description || "No description"}</p>
-                    <Badge variant="secondary" className="mt-2 text-xs">{a.training?.frequency?.replace("_", " ")}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
+        sortedCategories.map((cat) => {
+          const items = grouped[cat];
+          return (
+            <div key={cat} className="space-y-3">
+              <h2 className="text-lg font-semibold text-foreground">{categoryLabel(cat)}</h2>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {items.map((a) => (
+                  <Card key={a.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/dashboard/training/${a.training?.id}`)}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{a.training?.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{a.training?.description || "No description"}</p>
+                      <Badge variant="secondary" className="mt-2 text-xs">{a.training?.frequency?.replace("_", " ")}</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
