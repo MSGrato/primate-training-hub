@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -11,22 +12,49 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Plus, Pencil, Trash2, UserPlus, Search, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 type TrainingCategory = "onboarding" | "on_the_job" | "sop";
 type TrainingFrequency = "one_time" | "annual" | "semi_annual" | "as_needed";
 type TrainingContentType = "link" | "file" | null;
+type SortCol = "title" | "category" | "frequency" | "updated_at";
+type SortDir = "asc" | "desc";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  onboarding: "On-boarding",
+  on_the_job: "On-the-Job",
+  sop: "SOPs",
+};
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  one_time: "One-time",
+  annual: "Annual",
+  semi_annual: "Semi-annual",
+  as_needed: "As Needed",
+};
 
 interface ParsedBulkLink {
   title: string;
   url: string;
 }
 
+function formatTimestamp(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function ManageTrainings() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [trainings, setTrainings] = useState<any[]>([]);
+  const [coordinatorNames, setCoordinatorNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -50,6 +78,13 @@ export default function ManageTrainings() {
     content_type: null as TrainingContentType,
   });
 
+  // Filter & sort state
+  const [searchText, setSearchText] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterFrequency, setFilterFrequency] = useState("all");
+  const [sortCol, setSortCol] = useState<SortCol>("updated_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
   // Assign dialog state
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignTraining, setAssignTraining] = useState<any>(null);
@@ -59,12 +94,83 @@ export default function ManageTrainings() {
   const [assignLoading, setAssignLoading] = useState(false);
 
   const fetchTrainings = async () => {
-    const { data } = await supabase.from("trainings").select("*").order("created_at", { ascending: false });
-    setTrainings(data || []);
+    const { data } = await supabase.from("trainings").select("*").order("updated_at", { ascending: false });
+    const rows = data || [];
+    setTrainings(rows);
+
+    // Build coordinator name map from updated_by UUIDs
+    const ids = [...new Set(rows.map((t: any) => t.updated_by).filter(Boolean))];
+    if (ids.length > 0) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", ids);
+      const map: Record<string, string> = {};
+      (profilesData || []).forEach((p: any) => { map[p.user_id] = p.full_name; });
+      setCoordinatorNames(map);
+    }
+
     setLoading(false);
   };
 
   useEffect(() => { fetchTrainings(); }, []);
+
+  // Derived: filtered + sorted trainings
+  const displayedTrainings = useMemo(() => {
+    let result = [...trainings];
+
+    if (searchText.trim()) {
+      const lower = searchText.toLowerCase();
+      result = result.filter((t) => t.title.toLowerCase().includes(lower));
+    }
+    if (filterCategory !== "all") {
+      result = result.filter((t) => t.category === filterCategory);
+    }
+    if (filterFrequency !== "all") {
+      result = result.filter((t) => t.frequency === filterFrequency);
+    }
+
+    result.sort((a, b) => {
+      let valA: any = a[sortCol] ?? "";
+      let valB: any = b[sortCol] ?? "";
+      if (sortCol === "updated_at") {
+        valA = new Date(valA).getTime();
+        valB = new Date(valB).getTime();
+      } else {
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+      if (valA < valB) return sortDir === "asc" ? -1 : 1;
+      if (valA > valB) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [trainings, searchText, filterCategory, filterFrequency, sortCol, sortDir]);
+
+  const hasActiveFilters = searchText.trim() || filterCategory !== "all" || filterFrequency !== "all";
+
+  const clearFilters = () => {
+    setSearchText("");
+    setFilterCategory("all");
+    setFilterFrequency("all");
+  };
+
+  const toggleSort = (col: SortCol) => {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortCol }) => {
+    if (sortCol !== col) return <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="ml-1 h-3 w-3" />
+      : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
 
   const resetForm = () => {
     setForm({ title: "", description: "", category: "onboarding", frequency: "one_time", content_url: "", content_type: null });
@@ -179,6 +285,7 @@ export default function ManageTrainings() {
       frequency: TrainingFrequency;
       content_url: string;
       content_type: "file" | "link";
+      updated_by: string | null;
     }> = [];
 
     if (hasFiles) {
@@ -203,6 +310,7 @@ export default function ManageTrainings() {
           frequency: bulkForm.frequency,
           content_url: uploadedUrl,
           content_type: "file",
+          updated_by: user?.id ?? null,
         });
       }
     }
@@ -219,6 +327,7 @@ export default function ManageTrainings() {
           frequency: bulkForm.frequency,
           content_url: item.url,
           content_type: "link",
+          updated_by: user?.id ?? null,
         });
       }
     }
@@ -278,6 +387,7 @@ export default function ManageTrainings() {
       frequency: form.frequency,
       content_url: nextContentUrl || null,
       content_type: nextContentType,
+      updated_by: user?.id ?? null,
     };
 
     if (editing) {
@@ -513,32 +623,120 @@ export default function ManageTrainings() {
           </Dialog>
         </div>
       </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search trainings..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="onboarding">On-boarding</SelectItem>
+            <SelectItem value="on_the_job">On-the-Job</SelectItem>
+            <SelectItem value="sop">SOPs</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterFrequency} onValueChange={setFilterFrequency}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All frequencies" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All frequencies</SelectItem>
+            <SelectItem value="one_time">One-time</SelectItem>
+            <SelectItem value="annual">Annual</SelectItem>
+            <SelectItem value="semi_annual">Semi-annual</SelectItem>
+            <SelectItem value="as_needed">As Needed</SelectItem>
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
+            <X className="mr-1 h-3 w-3" />Clear
+          </Button>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">
+          {displayedTrainings.length} of {trainings.length} training{trainings.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Frequency</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("title")}
+                  >
+                    Title <SortIcon col="title" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("category")}
+                  >
+                    Category <SortIcon col="category" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("frequency")}
+                  >
+                    Frequency <SortIcon col="frequency" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center font-medium hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("updated_at")}
+                  >
+                    Last Updated <SortIcon col="updated_at" />
+                  </button>
+                </TableHead>
+                <TableHead className="w-28">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trainings.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.title}</TableCell>
-                  <TableCell>{t.category?.replace("_", " ")}</TableCell>
-                  <TableCell>{t.frequency?.replace("_", " ")}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => handleOpenAssign(t)} title="Assign users"><UserPlus className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => handleEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
+              {displayedTrainings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    {hasActiveFilters ? "No trainings match the current filters." : "No trainings yet."}
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                displayedTrainings.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell className="font-medium">{t.title}</TableCell>
+                    <TableCell>{CATEGORY_LABELS[t.category] ?? t.category}</TableCell>
+                    <TableCell>{FREQUENCY_LABELS[t.frequency] ?? t.frequency}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">{formatTimestamp(t.updated_at)}</div>
+                      {t.updated_by && coordinatorNames[t.updated_by] && (
+                        <div className="text-xs text-muted-foreground">by {coordinatorNames[t.updated_by]}</div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => handleOpenAssign(t)} title="Assign users"><UserPlus className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => handleEdit(t)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
