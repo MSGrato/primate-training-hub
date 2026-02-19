@@ -284,7 +284,7 @@ export default function TrainingReport() {
       <h1 className="text-2xl font-bold text-foreground">Training Report</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Report Chat</CardTitle>
+          <CardTitle>Training Chat</CardTitle>
           <CardDescription>Generate live training reports using app data and your role-based access scope.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
