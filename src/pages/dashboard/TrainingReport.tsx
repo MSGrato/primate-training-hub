@@ -285,7 +285,7 @@ export default function TrainingReport() {
       <Card>
         <CardHeader>
           <CardTitle>Training Chat</CardTitle>
-          <CardDescription>Generate live training reports using app data and your role-based access scope.</CardDescription>
+          <CardDescription>Generate live training reports using app data and your role-based access scope, or search for a specific training you need to take.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
