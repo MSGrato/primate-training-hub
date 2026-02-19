@@ -88,36 +88,63 @@ Deno.serve(async (req) => {
       const userId = newUser.user.id;
 
       // Ensure profile exists and is populated before returning.
-      const { error: profileErr } = await adminClient
+      const { data: existingProfile } = await adminClient
         .from("profiles")
-        .upsert(
-          {
-            user_id: userId,
-            full_name,
-            net_id,
-            job_title_id: job_title_id ?? null,
-          },
-          { onConflict: "user_id" }
-        );
-      if (profileErr) {
-        return new Response(JSON.stringify({ error: profileErr.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existingProfile) {
+        const { error: profileErr } = await adminClient
+          .from("profiles")
+          .update({ full_name, net_id, job_title_id: job_title_id ?? null })
+          .eq("user_id", userId);
+        if (profileErr) {
+          return new Response(JSON.stringify({ error: profileErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        const { error: profileErr } = await adminClient
+          .from("profiles")
+          .insert({ user_id: userId, full_name, net_id, job_title_id: job_title_id ?? null });
+        if (profileErr) {
+          return new Response(JSON.stringify({ error: profileErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
 
       // Update role explicitly when provided.
-      const { error: roleErr } = await adminClient
+      const { data: existingRole } = await adminClient
         .from("user_roles")
-        .upsert(
-          { user_id: userId, role: role ?? "employee" },
-          { onConflict: "user_id" }
-        );
-      if (roleErr) {
-        return new Response(JSON.stringify({ error: roleErr.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existingRole) {
+        const { error: roleErr } = await adminClient
+          .from("user_roles")
+          .update({ role: role ?? "employee" })
+          .eq("user_id", userId);
+        if (roleErr) {
+          return new Response(JSON.stringify({ error: roleErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        const { error: roleErr } = await adminClient
+          .from("user_roles")
+          .insert({ user_id: userId, role: role ?? "employee" });
+        if (roleErr) {
+          return new Response(JSON.stringify({ error: roleErr.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
 
       return new Response(JSON.stringify({ success: true, user_id: userId }), {
@@ -157,14 +184,33 @@ Deno.serve(async (req) => {
 
       // Update role
       if (role) {
-        const { error: roleErr } = await adminClient
+        const { data: existingRole } = await adminClient
           .from("user_roles")
-          .upsert({ user_id, role }, { onConflict: "user_id" });
-        if (roleErr) {
-          return new Response(JSON.stringify({ error: roleErr.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          .select("id")
+          .eq("user_id", user_id)
+          .maybeSingle();
+
+        if (existingRole) {
+          const { error: roleErr } = await adminClient
+            .from("user_roles")
+            .update({ role })
+            .eq("user_id", user_id);
+          if (roleErr) {
+            return new Response(JSON.stringify({ error: roleErr.message }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          const { error: roleErr } = await adminClient
+            .from("user_roles")
+            .insert({ user_id, role });
+          if (roleErr) {
+            return new Response(JSON.stringify({ error: roleErr.message }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
       }
 
