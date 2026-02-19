@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:users": "node scripts/import-users-from-csv.mjs",
-    "sync:job-descriptions": "node scripts/sync-job-descriptions.mjs"
+    "sync:job-descriptions": "node scripts/sync-job-descriptions.mjs",
+    "deploy:supabase-agent": "./scripts/deploy-supabase-agent.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
