@@ -52,33 +52,35 @@ export default function Home() {
 
   return (
     <div className="flex min-h-[calc(100vh-2rem)] flex-col">
+      {/* Top bar with sign out */}
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground"
+          onClick={signOut}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
+
       {/* Hero banner */}
       <div className="relative overflow-hidden rounded-xl bg-primary px-6 py-10 sm:px-10 sm:py-14">
         {/* Decorative circles */}
         <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-white/5" />
 
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <PrimateLogo className="hidden h-12 w-12 text-secondary sm:block" />
-            <div>
-              <h1 className="text-2xl font-bold text-primary-foreground sm:text-3xl lg:text-4xl">
-                Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}.
-              </h1>
-              <p className="mt-1 text-primary-foreground/70">
-                {roleLabel} · WaNBRC Training Portal
-              </p>
-            </div>
+        <div className="relative flex items-center gap-4">
+          <PrimateLogo className="hidden h-12 w-12 text-secondary sm:block" />
+          <div>
+            <h1 className="text-2xl font-bold text-primary-foreground sm:text-3xl lg:text-4xl">
+              Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}.
+            </h1>
+            <p className="mt-1 text-primary-foreground/70">
+              {roleLabel} · WaNBRC Training Portal
+            </p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground"
-            onClick={signOut}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
         </div>
       </div>
 
