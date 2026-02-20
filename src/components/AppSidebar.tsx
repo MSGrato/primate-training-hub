@@ -26,6 +26,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarHeader,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,11 @@ import { PrimateLogo } from "@/components/PrimateLogo";
 
 export function AppSidebar() {
   const { profile, role, signOut } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   const employeeItems = [
     { title: "Home", url: "/dashboard/home", icon: House },
@@ -83,6 +89,7 @@ export function AppSidebar() {
                       end={item.url === "/dashboard/home"}
                       className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                       activeClassName="bg-sidebar-accent text-secondary font-medium"
+                      onClick={closeMobile}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       <span>{item.title}</span>
@@ -106,6 +113,7 @@ export function AppSidebar() {
                         to={item.url}
                         className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                         activeClassName="bg-sidebar-accent text-secondary font-medium"
+                        onClick={closeMobile}
                       >
                         <item.icon className="mr-2 h-4 w-4" />
                         <span>{item.title}</span>
@@ -130,6 +138,7 @@ export function AppSidebar() {
                         to={item.url}
                         className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                         activeClassName="bg-sidebar-accent text-secondary font-medium"
+                        onClick={closeMobile}
                       >
                         <item.icon className="mr-2 h-4 w-4" />
                         <span>{item.title}</span>
