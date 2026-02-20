@@ -1,16 +1,16 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import SortableReportTable from "@/components/SortableReportTable";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search" | "employee_search";
 
@@ -53,12 +53,12 @@ type ReportChatAgentProps = {
 const VISIBLE_CHAT_ROWS = 20;
 
 function escapeHtml(value: string) {
-  return value.
-  split("&").join("&amp;").
-  split("<").join("&lt;").
-  split(">").join("&gt;").
-  split('"').join("&quot;").
-  split("'").join("&#39;");
+  return value
+    .split("&").join("&amp;")
+    .split("<").join("&lt;")
+    .split(">").join("&gt;")
+    .split('"').join("&quot;")
+    .split("'").join("&#39;");
 }
 
 export default function ReportChatAgent({
@@ -83,10 +83,11 @@ export default function ReportChatAgent({
 
   const quickPrompts = useMemo(
     () => [
-    "Show overdue trainings",
-    "List all employees",
-    "What trainings should my team prioritize?",
-    "Show completion rate by job title"],
+      "Show overdue trainings",
+      "List all employees",
+      "What trainings should my team prioritize?",
+      "Show completion rate by job title",
+    ],
     []
   );
 
@@ -109,7 +110,7 @@ export default function ReportChatAgent({
       toast({
         title: "Popup blocked",
         description: "Allow popups to export report PDF.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -117,14 +118,14 @@ export default function ReportChatAgent({
     const now = new Date();
     const reportRows = mode === "visible" ? report.rows.slice(0, VISIBLE_CHAT_ROWS) : report.rows;
     const headers = reportRows.length > 0 ? Object.keys(reportRows[0]) : [];
-    const rowsHtml = reportRows.
-    map((row) => {
-      const cells = headers.
-      map((header) => `<td>${escapeHtml(renderValue(row[header]))}</td>`).
-      join("");
-      return `<tr>${cells}</tr>`;
-    }).
-    join("");
+    const rowsHtml = reportRows
+      .map((row) => {
+        const cells = headers
+          .map((header) => `<td>${escapeHtml(renderValue(row[header]))}</td>`)
+          .join("");
+        return `<tr>${cells}</tr>`;
+      })
+      .join("");
 
     const html = `<!doctype html>
 <html>
@@ -136,8 +137,6 @@ export default function ReportChatAgent({
       h1 { margin: 0 0 8px; font-size: 20px; }
       p { margin: 4px 0; font-size: 12px; }
       .meta { margin-bottom: 16px; }
-      .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 16px; }
-      .chip { border: 1px solid #d1d5db; border-radius: 999px; padding: 4px 10px; font-size: 12px; }
       table { width: 100%; border-collapse: collapse; font-size: 11px; }
       th, td { border: 1px solid #e5e7eb; text-align: left; padding: 6px; vertical-align: top; }
       th { background: #f3f4f6; }
@@ -151,28 +150,19 @@ export default function ReportChatAgent({
       <p><strong>Export Mode:</strong> ${escapeHtml(mode === "visible" ? "Visible Rows Only" : "All Rows")}</p>
       <p><strong>Summary:</strong> ${escapeHtml(report.summary)}</p>
     </div>
-    <div class="chips">
-      <span class="chip">Users: ${report.scope.users}</span>
-      <span class="chip">Assignments: ${report.highlights.total_assignments}</span>
-      <span class="chip">Overdue: ${report.highlights.overdue}</span>
-      <span class="chip">Due Soon: ${report.highlights.due_soon}</span>
-      <span class="chip">Compliance: ${report.highlights.completion_rate}%</span>
-    </div>
     ${
-    headers.length > 0 ?
-    `<table>
+      headers.length > 0
+        ? `<table>
             <thead><tr>${headers.map((h) => `<th>${escapeHtml(h.split("_").join(" "))}</th>`).join("")}</tr></thead>
             <tbody>${rowsHtml}</tbody>
-          </table>` :
-    "<p>No rows returned for this report.</p>"}
+          </table>`
+        : "<p>No rows returned for this report.</p>"
+    }
     <script>
-      window.onload = () => {
-        window.print();
-      };
+      window.onload = () => { window.print(); };
     </script>
   </body>
 </html>`;
-
 
     popup.document.open();
     popup.document.write(html);
@@ -188,23 +178,15 @@ export default function ReportChatAgent({
     setChatLoading(true);
 
     const { data, error } = await supabase.functions.invoke("report-chat", {
-      body: { prompt: text }
+      body: { prompt: text },
     });
 
     if (error) {
       setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        text: `Failed to run report: ${error.message}`
-      }]
-      );
-      toast({
-        title: "Report chat failed",
-        description: error.message,
-        variant: "destructive"
-      });
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", text: `Failed to run report: ${error.message}` },
+      ]);
+      toast({ title: "Report chat failed", description: error.message, variant: "destructive" });
       setChatLoading(false);
       return;
     }
@@ -212,32 +194,19 @@ export default function ReportChatAgent({
     if (!data || data.error) {
       const message = data?.error ?? "Report chat returned no data.";
       setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        text: `Failed to run report: ${message}`
-      }]
-      );
-      toast({
-        title: "Report chat failed",
-        description: message,
-        variant: "destructive"
-      });
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", text: `Failed to run report: ${message}` },
+      ]);
+      toast({ title: "Report chat failed", description: message, variant: "destructive" });
       setChatLoading(false);
       return;
     }
 
     const response = data as ChatResponse;
     setMessages((prev) => [
-    ...prev,
-    {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      text: response.summary,
-      report: response
-    }]
-    );
+      ...prev,
+      { id: crypto.randomUUID(), role: "assistant", text: response.summary, report: response },
+    ]);
     setChatLoading(false);
   };
 
@@ -250,18 +219,18 @@ export default function ReportChatAgent({
     <Card>
       <CardContent className="space-y-4 pt-6">
         <div className="flex flex-wrap gap-2">
-          {quickPrompts.map((item) =>
-          <Button
-            key={item}
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={chatLoading}
-            onClick={() => submitPrompt(item)}>
-
+          {quickPrompts.map((item) => (
+            <Button
+              key={item}
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={chatLoading}
+              onClick={() => submitPrompt(item)}
+            >
               {item}
             </Button>
-          )}
+          ))}
         </div>
 
         <form className="space-y-2" onSubmit={onSubmit}>
@@ -270,10 +239,14 @@ export default function ReportChatAgent({
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="Ask Agent Train for what you need"
             rows={3}
-            disabled={chatLoading} />
-
+            disabled={chatLoading}
+          />
           <div className="flex justify-end">
-            <Button type="submit" disabled={chatLoading || !prompt.trim()} className="px-6 py-2 text-base font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <Button
+              type="submit"
+              disabled={chatLoading || !prompt.trim()}
+              className="px-6 py-2 text-base font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+            >
               {chatLoading ? "Generating..." : "Ask"}
             </Button>
           </div>
@@ -281,58 +254,41 @@ export default function ReportChatAgent({
 
         {hasInteraction && (
           <ScrollArea className="h-[420px] rounded-md border bg-muted/40 p-4">
-            <div className="space-y-4">
-              {messages.map((msg) => (
-                <div key={msg.id} className={msg.role === "user" ? "flex justify-end" : ""}>
-                  <div
-                    className={
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-lg px-4 py-2 max-w-[80%]"
-                        : "space-y-3"
-                    }
-                  >
-                    <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
-                      <ReactMarkdown>{msg.text}</ReactMarkdown>
-                    </div>
-
-                    {msg.report && msg.report.rows.length > 0 && (
-                      <>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          <Badge variant="outline">Users: {msg.report.scope.users}</Badge>
-                          <Badge variant="outline">Assignments: {msg.report.highlights.total_assignments}</Badge>
-                          <Badge variant="outline">Overdue: {msg.report.highlights.overdue}</Badge>
-                          <Badge variant="outline">Due Soon: {msg.report.highlights.due_soon}</Badge>
-                          <Badge variant="outline">Compliance: {msg.report.highlights.completion_rate}%</Badge>
-                        </div>
-
-                        <SortableReportTable rows={msg.report.rows} maxRows={VISIBLE_CHAT_ROWS} />
-
-                        {msg.report.rows.length > VISIBLE_CHAT_ROWS && (
-                          <p className="text-xs text-muted-foreground">
-                            Showing {VISIBLE_CHAT_ROWS} of {msg.report.rows.length} rows.
-                          </p>
-                        )}
-
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => exportReportToPdf(msg.report!, "visible")}>
-                            Export Visible
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => exportReportToPdf(msg.report!, "all")}>
-                            Export All
-                          </Button>
-                        </div>
-                      </>
-                    )}
-
-                    {msg.report && msg.report.suggested_prompts && msg.report.suggested_prompts.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {msg.report.suggested_prompts.map((sp) => (
-                          <Button key={sp} size="sm" variant="ghost" className="text-xs" disabled={chatLoading} onClick={() => submitPrompt(sp)}>
-                            {sp}
-                          </Button>
-                        ))}
+            <div className="space-y-1">
+              {messages.map((msg, idx) => (
+                <div key={msg.id}>
+                  {idx > 0 && messages[idx - 1].role !== msg.role && (
+                    <Separator className="my-3" />
+                  )}
+                  <div className={msg.role === "user" ? "flex justify-end" : ""}>
+                    <div
+                      className={
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-lg px-4 py-2 max-w-[80%]"
+                          : "space-y-3"
+                      }
+                    >
+                      <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                        <ReactMarkdown>{msg.text}</ReactMarkdown>
                       </div>
-                    )}
+
+                      {msg.report && msg.report.rows.length > 0 && (
+                        <CollapsibleTable
+                          report={msg.report}
+                          chatLoading={chatLoading}
+                          onExport={exportReportToPdf}
+                          onSuggest={submitPrompt}
+                        />
+                      )}
+
+                      {msg.report && msg.report.rows.length === 0 && msg.report.suggested_prompts.length > 0 && (
+                        <SuggestedPrompts
+                          prompts={msg.report.suggested_prompts}
+                          disabled={chatLoading}
+                          onSelect={submitPrompt}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -343,6 +299,78 @@ export default function ReportChatAgent({
           </ScrollArea>
         )}
       </CardContent>
-    </Card>);
+    </Card>
+  );
+}
 
+/* ── Collapsible table sub-component ── */
+
+function CollapsibleTable({
+  report,
+  chatLoading,
+  onExport,
+  onSuggest,
+}: {
+  report: ChatResponse;
+  chatLoading: boolean;
+  onExport: (report: ChatResponse, mode: "all" | "visible") => void;
+  onSuggest: (prompt: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const rowCount = report.rows.length;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="flex items-center justify-between">
+        <CollapsibleTrigger asChild>
+          <button className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+            {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            {rowCount} {rowCount === 1 ? "result" : "results"}
+          </button>
+        </CollapsibleTrigger>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => onExport(report, "visible")}>
+            Export Visible
+          </Button>
+          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => onExport(report, "all")}>
+            Export All
+          </Button>
+        </div>
+      </div>
+      <CollapsibleContent>
+        <SortableReportTable rows={report.rows} maxRows={VISIBLE_CHAT_ROWS} />
+      </CollapsibleContent>
+
+      {report.suggested_prompts && report.suggested_prompts.length > 0 && (
+        <SuggestedPrompts prompts={report.suggested_prompts} disabled={chatLoading} onSelect={onSuggest} />
+      )}
+    </Collapsible>
+  );
+}
+
+/* ── Suggested prompts as pill buttons ── */
+
+function SuggestedPrompts({
+  prompts,
+  disabled,
+  onSelect,
+}: {
+  prompts: string[];
+  disabled: boolean;
+  onSelect: (prompt: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 pt-2">
+      {prompts.map((sp) => (
+        <button
+          key={sp}
+          className="rounded-full border border-primary/30 bg-transparent px-3 py-1 text-xs text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+          disabled={disabled}
+          onClick={() => onSelect(sp)}
+        >
+          {sp}
+        </button>
+      ))}
+    </div>
+  );
 }

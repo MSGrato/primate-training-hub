@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 type Row = Record<string, unknown>;
@@ -9,8 +10,33 @@ type SortState = {
   direction: "asc" | "desc";
 } | null;
 
-function renderValue(value: unknown): string {
+function capitalizeHeader(header: string): string {
+  return header
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+const statusColors: Record<string, { className: string; label: string }> = {
+  overdue: { className: "bg-destructive text-destructive-foreground", label: "Overdue" },
+  due_soon: { className: "bg-yellow-500 text-white", label: "Due Soon" },
+  compliant: { className: "bg-green-600 text-white", label: "Compliant" },
+  not_started: { className: "bg-muted text-muted-foreground", label: "Not Started" },
+};
+
+function renderValue(value: unknown, header?: string): React.ReactNode {
   if (value === null || value === undefined || value === "") return "—";
+
+  // Status badge rendering
+  if (header === "status" && typeof value === "string" && statusColors[value]) {
+    const style = statusColors[value];
+    return (
+      <Badge className={`${style.className} text-[10px] px-1.5 py-0`}>
+        {style.label}
+      </Badge>
+    );
+  }
+
   if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(1);
   if (typeof value === "string") {
     const maybeDate = new Date(value);
@@ -38,7 +64,6 @@ export default function SortableReportTable({ rows, maxRows }: SortableReportTab
   const headers = useMemo(() => {
     if (rows.length === 0) return [];
     const keys = Object.keys(rows[0]);
-    // Preferred display order for report columns
     const preferredOrder = [
       "net_id", "full_name", "job_title", "training_title", "category",
       "frequency", "status", "last_completed_at", "next_due_at",
@@ -93,7 +118,7 @@ export default function SortableReportTable({ rows, maxRows }: SortableReportTab
                 onClick={() => handleSort(header)}
               >
                 <span className="inline-flex items-center">
-                  {header.split("_").join(" ")}
+                  {capitalizeHeader(header)}
                   <SortIcon column={header} />
                 </span>
               </TableHead>
@@ -105,7 +130,7 @@ export default function SortableReportTable({ rows, maxRows }: SortableReportTab
             <TableRow key={idx}>
               {headers.map((header) => (
                 <TableCell key={header} className="text-xs whitespace-nowrap">
-                  {renderValue(row[header])}
+                  {renderValue(row[header], header)}
                 </TableCell>
               ))}
             </TableRow>
