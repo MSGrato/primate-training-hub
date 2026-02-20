@@ -253,22 +253,56 @@ Deno.serve(async (req) => {
         .from("trainings").select("id,title,description,category,frequency").order("title", { ascending: true });
       if (trainingsError) throw new Error(trainingsError.message);
 
-      const matches = (trainings ?? [])
+      const scored = (trainings ?? [])
         .map(t => {
           const haystack = [t.title ?? "", t.description ?? "", t.category ?? "", t.frequency ?? ""].join(" ").toLowerCase();
           const score = queryTokens.length === 0 ? 1 : queryTokens.reduce((c, tk) => c + (haystack.includes(tk) ? 1 : 0), 0);
-          return { title: t.title, description: t.description, category: t.category, frequency: t.frequency, match_score: score };
+          return { ...t, match_score: score };
         })
         .filter(r => r.match_score > 0)
         .sort((a, b) => b.match_score - a.match_score || a.title.localeCompare(b.title))
         .slice(0, 200);
 
-      const dataCtx = `Found ${matches.length} trainings matching "${query}". Top results: ${matches.slice(0, 10).map(m => m.title).join(", ")}`;
+      // Cross-reference with caller's assignments and completions to compute due dates
+      const matchedIds = scored.map(t => t.id);
+
+      const { data: userAssignments } = await supabase
+        .from("user_training_assignments").select("training_id").eq("user_id", callerId).in("training_id", matchedIds);
+      const assignedSet = new Set((userAssignments ?? []).map(a => a.training_id));
+
+      const { data: userCompletions } = await supabase
+        .from("training_completions").select("training_id,completed_at,approved_at,status")
+        .eq("user_id", callerId).eq("status", "approved").in("training_id", matchedIds)
+        .order("completed_at", { ascending: false });
+
+      const latestByTraining = new Map<string, { approved_at: string | null; completed_at: string }>();
+      for (const c of (userCompletions ?? [])) {
+        if (!latestByTraining.has(c.training_id)) latestByTraining.set(c.training_id, c);
+      }
+
+      const matches = scored.map(t => {
+        let due_date: string | null = null;
+        if (assignedSet.has(t.id)) {
+          const latest = latestByTraining.get(t.id);
+          const lastDate = asDate(latest?.approved_at ?? latest?.completed_at ?? null);
+          const freq = t.frequency as "one_time" | "annual" | "semi_annual" | "as_needed";
+          const statusInfo = buildStatus(freq, lastDate, now, dueSoonDays);
+          due_date = statusInfo.nextDue ? statusInfo.nextDue.toISOString() : null;
+        }
+        return { training_title: t.title, due_date };
+      }).sort((a, b) => {
+        if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+        if (a.due_date) return -1;
+        if (b.due_date) return 1;
+        return 0;
+      });
+
+      const dataCtx = `Found ${matches.length} trainings matching "${query}". Top results: ${matches.slice(0, 10).map(m => `${m.training_title} (due: ${m.due_date ?? "N/A"})`).join(", ")}`;
       const aiSummary = await generateAISummary(prompt, dataCtx);
 
       return new Response(JSON.stringify({
         intent, summary: aiSummary,
-        scope: { role: callerRole, users: 0, dueSoonDays, net_id_filter: null },
+        scope: { role: callerRole, users: 1, dueSoonDays, net_id_filter: null },
         highlights: { total_assignments: matches.length, compliant: 0, overdue: 0, due_soon: 0, not_started: 0, completion_rate: 0 },
         rows: matches,
         suggested_prompts: ["Find trainings about biosafety", "Show overdue trainings", "What trainings should I prioritize?"],
