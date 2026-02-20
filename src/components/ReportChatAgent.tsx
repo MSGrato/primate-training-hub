@@ -91,12 +91,16 @@ export default function ReportChatAgent({
     []
   );
 
-  const renderValue = (value: unknown): string => {
+  const renderValue = (value: unknown, header?: string): string => {
     if (value === null || value === undefined || value === "") return "—";
     if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(1);
     if (typeof value === "string") {
-      const maybeDate = new Date(value);
-      if (!Number.isNaN(maybeDate.getTime()) && value.includes("T")) return maybeDate.toLocaleDateString();
+      const isDateColumn = header ? /(?:_at|_date|date)$/i.test(header) : false;
+      const looksIsoDate = /^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/.test(value);
+      if (isDateColumn && looksIsoDate) {
+        const maybeDate = new Date(value);
+        if (!Number.isNaN(maybeDate.getTime())) return maybeDate.toLocaleDateString();
+      }
       return value;
     }
     return String(JSON.stringify(value) ?? "—");
@@ -121,7 +125,7 @@ export default function ReportChatAgent({
     const rowsHtml = reportRows
       .map((row) => {
         const cells = headers
-          .map((header) => `<td>${escapeHtml(renderValue(row[header]))}</td>`)
+          .map((header) => `<td>${escapeHtml(renderValue(row[header], header))}</td>`)
           .join("");
         return `<tr>${cells}</tr>`;
       })

@@ -39,8 +39,12 @@ function renderValue(value: unknown, header?: string): React.ReactNode {
 
   if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(1);
   if (typeof value === "string") {
-    const maybeDate = new Date(value);
-    if (!Number.isNaN(maybeDate.getTime()) && value.includes("T")) return maybeDate.toLocaleDateString();
+    const isDateColumn = header ? /(?:_at|_date|date)$/i.test(header) : false;
+    const looksIsoDate = /^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/.test(value);
+    if (isDateColumn && looksIsoDate) {
+      const maybeDate = new Date(value);
+      if (!Number.isNaN(maybeDate.getTime())) return maybeDate.toLocaleDateString();
+    }
     return value;
   }
   return String(JSON.stringify(value) ?? "—");

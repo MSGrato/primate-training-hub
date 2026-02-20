@@ -180,6 +180,19 @@ function buildStatus(
   return { status: "compliant", nextDue };
 }
 
+function extractRequestedPersonName(prompt: string): string | null {
+  const normalized = prompt.trim();
+  if (!normalized) return null;
+
+  const explicitReportMatch = normalized.match(/^(?:show|generate|get|run)?\s*(?:a\s+)?training report for\s+(.+)$/i);
+  if (explicitReportMatch?.[1]) return explicitReportMatch[1].trim();
+
+  const genericForMatch = normalized.match(/^(?:show|list|find|get)\s+.*\s+for\s+(.+)$/i);
+  if (genericForMatch?.[1] && /training/i.test(normalized)) return genericForMatch[1].trim();
+
+  return null;
+}
+
 // ── Main handler ───────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -226,7 +239,12 @@ Deno.serve(async (req) => {
 
     // AI-powered intent classification
     const classification = await classifyIntent(prompt);
-    const intent = classification.intent;
+    const requestedPersonName = extractRequestedPersonName(prompt);
+    let intent = classification.intent;
+    // If the user explicitly asks for a training report for a person, run the training-report path.
+    if (requestedPersonName && (intent === "employee_search" || intent === "general")) {
+      intent = "summary";
+    }
     const dueSoonDays = classification.daysWindow;
     const requestedNetId = classification.netIdFilter;
     const now = new Date();
@@ -433,6 +451,15 @@ Deno.serve(async (req) => {
       }
       scopeProfiles = scopeProfiles.filter(p => p.net_id.toLowerCase() === requestedNetId.toLowerCase());
     }
+    if (requestedPersonName) {
+      if (callerRole === "employee") {
+        return new Response(JSON.stringify({ error: "Employees can only run reports for their own account." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const normalizedFilter = requestedPersonName.toLowerCase().trim();
+      scopeProfiles = scopeProfiles.filter((p) => p.full_name.toLowerCase().trim() === normalizedFilter);
+    }
 
     if (scopeProfiles.length === 0) {
       const aiSummary = await generateAISummary(prompt, "No users found in the caller's report scope.");
@@ -549,6 +576,7 @@ Deno.serve(async (req) => {
       intent === "due_soon" ? `Due soon trainings: ${(rows as any[]).slice(0, 15).map(r => `${r.full_name} - ${r.training_title} (due ${r.next_due_at})`).join("; ")}` : "",
       intent === "recommendations" ? `Non-compliant items: ${(rows as any[]).slice(0, 20).map(r => `${r.full_name} - ${r.training_title} (${r.status})`).join("; ")}` : "",
       requestedNetId ? `Filtered to NetID: ${requestedNetId}` : "",
+      requestedPersonName ? `Filtered to employee name: ${requestedPersonName}` : "",
     ].filter(Boolean).join("\n");
 
     const aiSummary = await generateAISummary(prompt, dataContext);
