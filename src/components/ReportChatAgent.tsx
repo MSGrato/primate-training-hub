@@ -259,7 +259,7 @@ export default function ReportChatAgent({
           )}
         </div>
 
-        <ScrollArea className="h-[420px] rounded-md border p-4">
+        <ScrollArea className="h-[420px] rounded-md border bg-muted/40 p-4">
           <div className="space-y-4">
             {messages.map((msg) => (
               <div key={msg.id} className={msg.role === "user" ? "flex justify-end" : ""}>
