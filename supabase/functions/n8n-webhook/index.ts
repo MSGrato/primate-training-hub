@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const N8N_WEBHOOK_URL = "https://msgrato.app.n8n.cloud/webhook-test/44d6986d-55f4-4771-a96e-facfbd984fb5";
+const N8N_WEBHOOK_URL = "https://msgrato.app.n8n.cloud/webhook/44d6986d-55f4-4771-a96e-facfbd984fb5";
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
