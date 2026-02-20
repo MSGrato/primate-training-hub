@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 type AppRole = "employee" | "supervisor" | "coordinator";
-type Intent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search";
+type Intent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search" | "recommendations" | "general";
 
 type ScopeProfile = {
   user_id: string;
@@ -36,66 +36,117 @@ type CompletionRow = {
   status: "pending" | "approved" | "rejected";
 };
 
-function parseIntent(prompt: string): Intent {
-  const p = prompt.toLowerCase();
+// ── AI helper ──────────────────────────────────────────────
 
-  if (
-    p.includes("find training") ||
-    p.includes("find trainings") ||
-    p.includes("search training") ||
-    p.includes("search trainings") ||
-    p.includes("look up training") ||
-    p.startsWith("training:")
-  ) {
-    return "training_search";
-  }
-  if (p.includes("by job title") || p.includes("job title breakdown") || p.includes("title breakdown")) {
-    return "by_job_title";
-  }
-  if (p.includes("completion rate") || p.includes("compliance rate")) {
-    return "completion_rate";
-  }
-  if (p.includes("due soon")) {
-    return "due_soon";
-  }
-  if (p.includes("overdue") || p.includes("not compliant")) {
-    return "overdue";
+async function callAI(systemPrompt: string, userPrompt: string, toolDefs?: unknown[], toolChoice?: unknown): Promise<unknown> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+  const body: Record<string, unknown> = {
+    model: "google/gemini-3-flash-preview",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+  };
+  if (toolDefs) body.tools = toolDefs;
+  if (toolChoice) body.tool_choice = toolChoice;
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (resp.status === 429) throw new Error("AI rate limit exceeded. Please try again in a moment.");
+  if (resp.status === 402) throw new Error("AI credits exhausted. Please add funds in Settings → Workspace → Usage.");
+  if (!resp.ok) {
+    const t = await resp.text();
+    console.error("AI gateway error:", resp.status, t);
+    throw new Error("AI service unavailable");
   }
 
-  return "summary";
+  return await resp.json();
 }
 
-function extractTrainingSearchQuery(prompt: string): string {
-  const trimmed = prompt.trim();
-  const lowered = trimmed.toLowerCase();
+async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQuery: string; daysWindow: number; netIdFilter: string | null }> {
+  const tools = [
+    {
+      type: "function",
+      function: {
+        name: "classify",
+        description: "Classify the user's training report prompt.",
+        parameters: {
+          type: "object",
+          properties: {
+            intent: {
+              type: "string",
+              enum: ["summary", "overdue", "due_soon", "completion_rate", "by_job_title", "training_search", "recommendations", "general"],
+              description: "summary=general training status overview, overdue=show overdue trainings, due_soon=show trainings due soon, completion_rate=compliance rates, by_job_title=breakdown by job title, training_search=search for specific trainings by name/topic, recommendations=suggest which trainings to prioritize, general=general question or conversation",
+            },
+            search_query: { type: "string", description: "If training_search, the search keywords. Otherwise empty string." },
+            days_window: { type: "number", description: "Number of days for due_soon window. Default 60." },
+            net_id_filter: { type: "string", description: "If the user asks about a specific person by NetID, the NetID. Otherwise null.", nullable: true },
+          },
+          required: ["intent", "search_query", "days_window"],
+          additionalProperties: false,
+        },
+      },
+    },
+  ];
 
-  if (lowered.startsWith("training:")) {
-    return trimmed.slice("training:".length).trim();
+  const result = await callAI(
+    "You classify training management prompts. Classify the user's intent accurately. Use 'general' only for questions unrelated to specific training data queries.",
+    prompt,
+    tools,
+    { type: "function", function: { name: "classify" } },
+  );
+
+  try {
+    const msg = (result as any).choices?.[0]?.message;
+    const call = msg?.tool_calls?.[0]?.function;
+    if (call) {
+      const args = JSON.parse(call.arguments);
+      return {
+        intent: args.intent ?? "summary",
+        searchQuery: args.search_query ?? "",
+        daysWindow: args.days_window ?? 60,
+        netIdFilter: args.net_id_filter ?? null,
+      };
+    }
+  } catch (e) {
+    console.error("Intent classification parse error:", e);
   }
-
-  const pattern = /(?:find|search|look up)\s+(?:for\s+)?(?:training|trainings)(?:\s+(?:about|for|with))?\s+(.+)/i;
-  const match = trimmed.match(pattern);
-  if (match?.[1]) return match[1].trim();
-
-  return trimmed;
+  return { intent: "summary", searchQuery: "", daysWindow: 60, netIdFilter: null };
 }
 
-function parseDaysWindow(prompt: string): number {
-  const p = prompt.toLowerCase();
-  const explicitDays = p.match(/(\d{1,3})\s*day/);
-  if (explicitDays) {
-    const parsed = Number.parseInt(explicitDays[1], 10);
-    if (Number.isFinite(parsed) && parsed > 0 && parsed <= 365) return parsed;
+async function generateAISummary(prompt: string, dataContext: string): Promise<string> {
+  const result = await callAI(
+    `You are Agent Train, an AI assistant for a primate research center training management system. You help supervisors, coordinators, and employees understand training compliance data.
+
+Rules:
+- Be concise but insightful. Use markdown formatting (bold, bullet lists, etc.).
+- When presenting data, highlight actionable insights: who is behind, what needs attention, trends.
+- For recommendations, prioritize overdue items first, then due-soon, then not-started.
+- If asked a general question, answer helpfully in the context of workplace training management.
+- Never fabricate data. Only reference what is provided in the data context.
+- Keep responses under 300 words unless the user asks for detail.`,
+    `User prompt: "${prompt}"\n\nData context:\n${dataContext}`,
+  );
+
+  try {
+    const content = (result as any).choices?.[0]?.message?.content;
+    if (content) return content;
+  } catch (e) {
+    console.error("AI summary parse error:", e);
   }
-  if (p.includes("this month")) return 30;
-  if (p.includes("next month")) return 30;
-  return 60;
+  return "Report generated successfully.";
 }
 
-function parseNetIdFilter(prompt: string): string | null {
-  const match = prompt.toLowerCase().match(/netid[:\s]+([a-z0-9._-]+)/);
-  return match?.[1] ?? null;
-}
+// ── Helpers ────────────────────────────────────────────────
 
 function asDate(value: string | null): Date | null {
   if (!value) return null;
@@ -115,40 +166,21 @@ function buildStatus(
   now: Date,
   dueSoonWindowDays: number,
 ) {
-  if (frequency === "one_time") {
-    return {
-      status: lastCompletionDate ? "compliant" : "not_started",
-      nextDue: null as Date | null,
-    };
+  if (frequency === "one_time" || frequency === "as_needed") {
+    return { status: lastCompletionDate ? "compliant" : "not_started", nextDue: null as Date | null };
   }
-
-  if (frequency === "as_needed") {
-    return {
-      status: lastCompletionDate ? "compliant" : "not_started",
-      nextDue: null as Date | null,
-    };
-  }
-
-  if (!lastCompletionDate) {
-    return {
-      status: "not_started",
-      nextDue: null as Date | null,
-    };
-  }
+  if (!lastCompletionDate) return { status: "not_started", nextDue: null as Date | null };
 
   const nextDue = frequency === "annual" ? addMonths(lastCompletionDate, 12) : addMonths(lastCompletionDate, 6);
-  if (nextDue < now) {
-    return { status: "overdue", nextDue };
-  }
+  if (nextDue < now) return { status: "overdue", nextDue };
 
   const soonCutoff = new Date(now);
   soonCutoff.setDate(soonCutoff.getDate() + dueSoonWindowDays);
-  if (nextDue <= soonCutoff) {
-    return { status: "due_soon", nextDue };
-  }
-
+  if (nextDue <= soonCutoff) return { status: "due_soon", nextDue };
   return { status: "compliant", nextDue };
 }
+
+// ── Main handler ───────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -159,8 +191,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -174,8 +205,7 @@ Deno.serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -184,229 +214,162 @@ Deno.serve(async (req) => {
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Prompt is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Get caller role
     const { data: roleRow, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", callerId)
-      .maybeSingle();
-    if (roleError) {
-      return new Response(JSON.stringify({ error: roleError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      .from("user_roles").select("role").eq("user_id", callerId).maybeSingle();
+    if (roleError) throw new Error(roleError.message);
     const callerRole = (roleRow?.role ?? "employee") as AppRole;
 
-    const intent = parseIntent(prompt);
-    const dueSoonDays = parseDaysWindow(prompt);
-    const requestedNetId = parseNetIdFilter(prompt);
+    // AI-powered intent classification
+    const classification = await classifyIntent(prompt);
+    const intent = classification.intent;
+    const dueSoonDays = classification.daysWindow;
+    const requestedNetId = classification.netIdFilter;
     const now = new Date();
 
+    // ── Handle general questions without data lookup ──
+    if (intent === "general") {
+      const aiSummary = await generateAISummary(prompt, `The user is a ${callerRole}. No specific training data was queried.`);
+      return new Response(JSON.stringify({
+        intent,
+        summary: aiSummary,
+        scope: { role: callerRole, users: 0, dueSoonDays, net_id_filter: null },
+        highlights: { total_assignments: 0, compliant: 0, overdue: 0, due_soon: 0, not_started: 0, completion_rate: 0 },
+        rows: [],
+        suggested_prompts: ["Show overdue trainings", "Show completion rate by job title", "What trainings should I prioritize?"],
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── Training search ──
     if (intent === "training_search") {
-      const query = extractTrainingSearchQuery(prompt).toLowerCase();
-      const queryTokens = query
-        .split(/\s+/)
-        .map((token) => token.trim())
-        .filter((token) => token.length >= 2);
+      const query = classification.searchQuery.toLowerCase();
+      const queryTokens = query.split(/\s+/).map(t => t.trim()).filter(t => t.length >= 2);
 
       const { data: trainings, error: trainingsError } = await supabase
-        .from("trainings")
-        .select("id,title,description,category,frequency")
-        .order("title", { ascending: true });
+        .from("trainings").select("id,title,description,category,frequency").order("title", { ascending: true });
       if (trainingsError) throw new Error(trainingsError.message);
 
       const matches = (trainings ?? [])
-        .map((training) => {
-          const haystack = [
-            training.title ?? "",
-            training.description ?? "",
-            training.category ?? "",
-            training.frequency ?? "",
-          ]
-            .join(" ")
-            .toLowerCase();
-
-          const score = queryTokens.length === 0
-            ? 1
-            : queryTokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0);
-
-          return {
-            id: training.id,
-            title: training.title,
-            description: training.description,
-            category: training.category,
-            frequency: training.frequency,
-            match_score: score,
-          };
+        .map(t => {
+          const haystack = [t.title ?? "", t.description ?? "", t.category ?? "", t.frequency ?? ""].join(" ").toLowerCase();
+          const score = queryTokens.length === 0 ? 1 : queryTokens.reduce((c, tk) => c + (haystack.includes(tk) ? 1 : 0), 0);
+          return { title: t.title, description: t.description, category: t.category, frequency: t.frequency, match_score: score };
         })
-        .filter((row) => row.match_score > 0)
+        .filter(r => r.match_score > 0)
         .sort((a, b) => b.match_score - a.match_score || a.title.localeCompare(b.title))
         .slice(0, 200);
 
-      return new Response(
-        JSON.stringify({
-          intent,
-          summary: queryTokens.length === 0
-            ? `Showing ${matches.length} trainings from the catalog.`
-            : `Found ${matches.length} trainings matching "${query}".`,
-          scope: {
-            role: callerRole,
-            users: 0,
-            dueSoonDays,
-            net_id_filter: null,
-          },
-          highlights: {
-            total_assignments: matches.length,
-            compliant: 0,
-            overdue: 0,
-            due_soon: 0,
-            not_started: 0,
-            completion_rate: 0,
-          },
-          rows: matches,
-          suggested_prompts: [
-            "Find trainings about biosafety",
-            "Find trainings for anesthesia",
-            "Show overdue trainings",
-          ],
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      const dataCtx = `Found ${matches.length} trainings matching "${query}". Top results: ${matches.slice(0, 10).map(m => m.title).join(", ")}`;
+      const aiSummary = await generateAISummary(prompt, dataCtx);
+
+      return new Response(JSON.stringify({
+        intent, summary: aiSummary,
+        scope: { role: callerRole, users: 0, dueSoonDays, net_id_filter: null },
+        highlights: { total_assignments: matches.length, compliant: 0, overdue: 0, due_soon: 0, not_started: 0, completion_rate: 0 },
+        rows: matches,
+        suggested_prompts: ["Find trainings about biosafety", "Show overdue trainings", "What trainings should I prioritize?"],
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── Gather scoped profiles ──
     let scopeProfiles: ScopeProfile[] = [];
 
     if (callerRole === "coordinator") {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("user_id,full_name,net_id,job_title_id,is_active")
-        .eq("is_active", true);
+      const { data, error } = await supabase.from("profiles").select("user_id,full_name,net_id,job_title_id,is_active").eq("is_active", true);
       if (error) throw new Error(error.message);
       scopeProfiles = (data ?? []) as ScopeProfile[];
     } else if (callerRole === "supervisor") {
-      const { data: mappings, error: mappingError } = await supabase
-        .from("supervisor_employee_mappings")
-        .select("employee_id")
-        .eq("supervisor_id", callerId);
+      const { data: mappings, error: mappingError } = await supabase.from("supervisor_employee_mappings").select("employee_id").eq("supervisor_id", callerId);
       if (mappingError) throw new Error(mappingError.message);
-
-      const scopedIds = Array.from(new Set([callerId, ...(mappings ?? []).map((m) => m.employee_id)]));
-      const { data: profileRows, error: profileError } = await supabase
-        .from("profiles")
-        .select("user_id,full_name,net_id,job_title_id,is_active")
-        .in("user_id", scopedIds)
-        .eq("is_active", true);
+      const scopedIds = Array.from(new Set([callerId, ...(mappings ?? []).map(m => m.employee_id)]));
+      const { data: profileRows, error: profileError } = await supabase.from("profiles").select("user_id,full_name,net_id,job_title_id,is_active").in("user_id", scopedIds).eq("is_active", true);
       if (profileError) throw new Error(profileError.message);
       scopeProfiles = (profileRows ?? []) as ScopeProfile[];
     } else {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("user_id,full_name,net_id,job_title_id,is_active")
-        .eq("user_id", callerId)
-        .eq("is_active", true);
+      const { data, error } = await supabase.from("profiles").select("user_id,full_name,net_id,job_title_id,is_active").eq("user_id", callerId).eq("is_active", true);
       if (error) throw new Error(error.message);
       scopeProfiles = (data ?? []) as ScopeProfile[];
     }
 
     if (requestedNetId) {
       if (callerRole === "employee") {
-        return new Response(
-          JSON.stringify({ error: "Employees can only run reports for their own account." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "Employees can only run reports for their own account." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-      scopeProfiles = scopeProfiles.filter((p) => p.net_id.toLowerCase() === requestedNetId);
+      scopeProfiles = scopeProfiles.filter(p => p.net_id.toLowerCase() === requestedNetId.toLowerCase());
     }
 
     if (scopeProfiles.length === 0) {
-      return new Response(
-        JSON.stringify({
-          intent,
-          summary: "No users found in your report scope.",
-          scope: { role: callerRole, users: 0, dueSoonDays },
-          highlights: { total_assignments: 0, compliant: 0, overdue: 0, due_soon: 0, not_started: 0, completion_rate: 0 },
-          rows: [],
-          suggested_prompts: [
-            "Show overdue trainings",
-            "Show due soon trainings in 30 days",
-            "Show completion rate by job title",
-          ],
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      const aiSummary = await generateAISummary(prompt, "No users found in the caller's report scope.");
+      return new Response(JSON.stringify({
+        intent, summary: aiSummary,
+        scope: { role: callerRole, users: 0, dueSoonDays },
+        highlights: { total_assignments: 0, compliant: 0, overdue: 0, due_soon: 0, not_started: 0, completion_rate: 0 },
+        rows: [],
+        suggested_prompts: ["Show overdue trainings", "Show completion rate by job title"],
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const userIds = scopeProfiles.map((p) => p.user_id);
+    const userIds = scopeProfiles.map(p => p.user_id);
 
     const { data: jobTitles, error: titleError } = await supabase.from("job_titles").select("id,name");
     if (titleError) throw new Error(titleError.message);
-    const jobTitleNameById = new Map<string, string>((jobTitles ?? []).map((t) => [t.id, t.name]));
+    const jobTitleNameById = new Map<string, string>((jobTitles ?? []).map(t => [t.id, t.name]));
 
     const { data: assignmentsData, error: assignmentsError } = await supabase
-      .from("user_training_assignments")
-      .select("user_id,training_id,training:trainings(id,title,category,frequency)")
-      .in("user_id", userIds);
+      .from("user_training_assignments").select("user_id,training_id,training:trainings(id,title,category,frequency)").in("user_id", userIds);
     if (assignmentsError) throw new Error(assignmentsError.message);
 
     const { data: completionsData, error: completionsError } = await supabase
-      .from("training_completions")
-      .select("user_id,training_id,completed_at,approved_at,status")
-      .in("user_id", userIds)
-      .eq("status", "approved")
-      .order("completed_at", { ascending: false });
+      .from("training_completions").select("user_id,training_id,completed_at,approved_at,status").in("user_id", userIds).eq("status", "approved").order("completed_at", { ascending: false });
     if (completionsError) throw new Error(completionsError.message);
 
     const assignments = (assignmentsData ?? []) as unknown as AssignmentRow[];
     const completions = (completionsData ?? []) as CompletionRow[];
 
-    const profileByUserId = new Map(scopeProfiles.map((p) => [p.user_id, p]));
+    const profileByUserId = new Map(scopeProfiles.map(p => [p.user_id, p]));
     const latestCompletionByUserTraining = new Map<string, CompletionRow>();
-    for (const completion of completions) {
-      const key = `${completion.user_id}:${completion.training_id}`;
-      if (!latestCompletionByUserTraining.has(key)) {
-        latestCompletionByUserTraining.set(key, completion);
-      }
+    for (const c of completions) {
+      const key = `${c.user_id}:${c.training_id}`;
+      if (!latestCompletionByUserTraining.has(key)) latestCompletionByUserTraining.set(key, c);
     }
 
-    const detailedRows = assignments
-      .filter((a) => a.training)
-      .map((a) => {
-        const profile = profileByUserId.get(a.user_id);
-        const key = `${a.user_id}:${a.training_id}`;
-        const latest = latestCompletionByUserTraining.get(key);
-        const lastDate = asDate(latest?.approved_at ?? latest?.completed_at ?? null);
-        const statusInfo = buildStatus(a.training!.frequency, lastDate, now, dueSoonDays);
-        const jobTitleName = profile?.job_title_id ? jobTitleNameById.get(profile.job_title_id) ?? "Unassigned" : "Unassigned";
+    const detailedRows = assignments.filter(a => a.training).map(a => {
+      const profile = profileByUserId.get(a.user_id);
+      const key = `${a.user_id}:${a.training_id}`;
+      const latest = latestCompletionByUserTraining.get(key);
+      const lastDate = asDate(latest?.approved_at ?? latest?.completed_at ?? null);
+      const statusInfo = buildStatus(a.training!.frequency, lastDate, now, dueSoonDays);
+      const jobTitleName = profile?.job_title_id ? jobTitleNameById.get(profile.job_title_id) ?? "Unassigned" : "Unassigned";
 
-        return {
-          net_id: profile?.net_id ?? "unknown",
-          full_name: profile?.full_name ?? "Unknown User",
-          job_title: jobTitleName,
-          training_title: a.training!.title,
-          category: a.training!.category,
-          frequency: a.training!.frequency,
-          status: statusInfo.status,
-          last_completed_at: lastDate ? lastDate.toISOString() : null,
-          next_due_at: statusInfo.nextDue ? statusInfo.nextDue.toISOString() : null,
-        };
-      });
+      return {
+        net_id: profile?.net_id ?? "unknown",
+        full_name: profile?.full_name ?? "Unknown User",
+        job_title: jobTitleName,
+        training_title: a.training!.title,
+        category: a.training!.category,
+        frequency: a.training!.frequency,
+        status: statusInfo.status,
+        last_completed_at: lastDate ? lastDate.toISOString() : null,
+        next_due_at: statusInfo.nextDue ? statusInfo.nextDue.toISOString() : null,
+      };
+    });
 
     const totals = {
       total_assignments: detailedRows.length,
-      compliant: detailedRows.filter((r) => r.status === "compliant").length,
-      overdue: detailedRows.filter((r) => r.status === "overdue").length,
-      due_soon: detailedRows.filter((r) => r.status === "due_soon").length,
-      not_started: detailedRows.filter((r) => r.status === "not_started").length,
+      compliant: detailedRows.filter(r => r.status === "compliant").length,
+      overdue: detailedRows.filter(r => r.status === "overdue").length,
+      due_soon: detailedRows.filter(r => r.status === "due_soon").length,
+      not_started: detailedRows.filter(r => r.status === "not_started").length,
     };
-    const completionRate = totals.total_assignments === 0
-      ? 0
-      : Number(((totals.compliant / totals.total_assignments) * 100).toFixed(1));
+    const completionRate = totals.total_assignments === 0 ? 0 : Number(((totals.compliant / totals.total_assignments) * 100).toFixed(1));
 
+    // ── Build rows based on intent ──
     const byJobTitle = new Map<string, { total: number; compliant: number; overdue: number; due_soon: number; not_started: number }>();
     for (const row of detailedRows) {
       const current = byJobTitle.get(row.job_title) ?? { total: 0, compliant: 0, overdue: 0, due_soon: 0, not_started: 0 };
@@ -419,79 +382,62 @@ Deno.serve(async (req) => {
     }
 
     const jobTitleBreakdown = Array.from(byJobTitle.entries())
-      .map(([job_title, value]) => ({
-        job_title,
-        ...value,
-        completion_rate: value.total === 0 ? 0 : Number(((value.compliant / value.total) * 100).toFixed(1)),
-      }))
+      .map(([job_title, v]) => ({ job_title, ...v, completion_rate: v.total === 0 ? 0 : Number(((v.compliant / v.total) * 100).toFixed(1)) }))
       .sort((a, b) => b.overdue - a.overdue || a.job_title.localeCompare(b.job_title));
 
     let rows: unknown[] = [];
     if (intent === "overdue") {
-      rows = detailedRows
-        .filter((r) => r.status === "overdue")
-        .sort((a, b) => (a.next_due_at ?? "").localeCompare(b.next_due_at ?? ""))
-        .slice(0, 200);
+      rows = detailedRows.filter(r => r.status === "overdue").sort((a, b) => (a.next_due_at ?? "").localeCompare(b.next_due_at ?? "")).slice(0, 200);
     } else if (intent === "due_soon") {
-      rows = detailedRows
-        .filter((r) => r.status === "due_soon")
-        .sort((a, b) => (a.next_due_at ?? "").localeCompare(b.next_due_at ?? ""))
-        .slice(0, 200);
+      rows = detailedRows.filter(r => r.status === "due_soon").sort((a, b) => (a.next_due_at ?? "").localeCompare(b.next_due_at ?? "")).slice(0, 200);
     } else if (intent === "completion_rate" || intent === "by_job_title") {
       rows = jobTitleBreakdown;
-    } else {
+    } else if (intent === "recommendations") {
+      // For recommendations, show overdue first, then due_soon, then not_started
       rows = detailedRows
+        .filter(r => r.status !== "compliant")
         .sort((a, b) => {
-          const rank = (status: string) => {
-            if (status === "overdue") return 0;
-            if (status === "due_soon") return 1;
-            if (status === "not_started") return 2;
-            return 3;
-          };
+          const rank = (s: string) => s === "overdue" ? 0 : s === "due_soon" ? 1 : 2;
           return rank(a.status) - rank(b.status);
         })
         .slice(0, 200);
+    } else {
+      rows = detailedRows.sort((a, b) => {
+        const rank = (s: string) => s === "overdue" ? 0 : s === "due_soon" ? 1 : s === "not_started" ? 2 : 3;
+        return rank(a.status) - rank(b.status);
+      }).slice(0, 200);
     }
 
-    const summaryByIntent: Record<Intent, string> = {
-      summary:
-        `Scope includes ${scopeProfiles.length} active users with ${totals.total_assignments} training assignments. ` +
-        `${totals.overdue} overdue, ${totals.due_soon} due soon, ${totals.not_started} not started; overall compliance ${completionRate}%.`,
-      overdue: `Found ${totals.overdue} overdue assignments across ${scopeProfiles.length} active users.`,
-      due_soon: `Found ${totals.due_soon} assignments due within ${dueSoonDays} days.`,
-      completion_rate: `Overall compliance is ${completionRate}% across ${totals.total_assignments} assignments.`,
-      by_job_title: `Generated job-title completion breakdown for ${jobTitleBreakdown.length} titles in scope.`,
-      training_search: "Training search complete.",
-    };
+    // ── Build data context for AI summary ──
+    const dataContext = [
+      `Role: ${callerRole}, Users in scope: ${scopeProfiles.length}`,
+      `Total assignments: ${totals.total_assignments}, Compliant: ${totals.compliant}, Overdue: ${totals.overdue}, Due soon: ${totals.due_soon}, Not started: ${totals.not_started}`,
+      `Overall completion rate: ${completionRate}%`,
+      `Due soon window: ${dueSoonDays} days`,
+      jobTitleBreakdown.length > 0 ? `Job title breakdown: ${jobTitleBreakdown.map(j => `${j.job_title}: ${j.completion_rate}% compliant, ${j.overdue} overdue`).join("; ")}` : "",
+      intent === "overdue" ? `Overdue trainings: ${(rows as any[]).slice(0, 15).map(r => `${r.full_name} - ${r.training_title}`).join("; ")}` : "",
+      intent === "due_soon" ? `Due soon trainings: ${(rows as any[]).slice(0, 15).map(r => `${r.full_name} - ${r.training_title} (due ${r.next_due_at})`).join("; ")}` : "",
+      intent === "recommendations" ? `Non-compliant items: ${(rows as any[]).slice(0, 20).map(r => `${r.full_name} - ${r.training_title} (${r.status})`).join("; ")}` : "",
+      requestedNetId ? `Filtered to NetID: ${requestedNetId}` : "",
+    ].filter(Boolean).join("\n");
 
-    return new Response(
-      JSON.stringify({
-        intent,
-        summary: summaryByIntent[intent],
-        scope: {
-          role: callerRole,
-          users: scopeProfiles.length,
-          dueSoonDays,
-          net_id_filter: requestedNetId,
-        },
-        highlights: {
-          ...totals,
-          completion_rate: completionRate,
-        },
-        rows,
-        suggested_prompts: [
-          "Show overdue trainings",
-          "Show due soon trainings in 30 days",
-          "Show completion rate by job title",
-        ],
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    const aiSummary = await generateAISummary(prompt, dataContext);
+
+    const suggestedPrompts = intent === "recommendations"
+      ? ["Show overdue trainings", "Show completion rate by job title", "Who has the most overdue trainings?"]
+      : ["What trainings should my team prioritize?", "Show overdue trainings", "Show completion rate by job title"];
+
+    return new Response(JSON.stringify({
+      intent, summary: aiSummary,
+      scope: { role: callerRole, users: scopeProfiles.length, dueSoonDays, net_id_filter: requestedNetId },
+      highlights: { ...totals, completion_rate: completionRate },
+      rows,
+      suggested_prompts: suggestedPrompts,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
