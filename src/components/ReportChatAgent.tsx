@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 
 type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search";
@@ -257,88 +258,88 @@ export default function ReportChatAgent({
           )}
         </div>
 
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        <ScrollArea className="h-[420px] rounded-md border p-4">
+          <div className="space-y-4">
+            {messages.map((msg) => (
+              <div key={msg.id} className={msg.role === "user" ? "flex justify-end" : ""}>
+                <div
+                  className={
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-lg px-4 py-2 max-w-[80%]"
+                      : "space-y-3"
+                  }
+                >
+                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+
+                  {msg.report && msg.report.rows.length > 0 && (
+                    <>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <Badge variant="outline">Users: {msg.report.scope.users}</Badge>
+                        <Badge variant="outline">Assignments: {msg.report.highlights.total_assignments}</Badge>
+                        <Badge variant="outline">Overdue: {msg.report.highlights.overdue}</Badge>
+                        <Badge variant="outline">Due Soon: {msg.report.highlights.due_soon}</Badge>
+                        <Badge variant="outline">Compliance: {msg.report.highlights.completion_rate}%</Badge>
+                      </div>
+
+                      <div className="rounded-md border overflow-auto max-h-[300px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {Object.keys(msg.report.rows[0]).map((header) => (
+                                <TableHead key={header} className="text-xs whitespace-nowrap">
+                                  {header.split("_").join(" ")}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {msg.report.rows.slice(0, VISIBLE_CHAT_ROWS).map((row, idx) => (
+                              <TableRow key={idx}>
+                                {Object.values(row).map((val, ci) => (
+                                  <TableCell key={ci} className="text-xs whitespace-nowrap">
+                                    {renderValue(val)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {msg.report.rows.length > VISIBLE_CHAT_ROWS && (
+                        <p className="text-xs text-muted-foreground">
+                          Showing {VISIBLE_CHAT_ROWS} of {msg.report.rows.length} rows.
+                        </p>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => exportReportToPdf(msg.report!, "visible")}>
+                          Export Visible
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => exportReportToPdf(msg.report!, "all")}>
+                          Export All
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {msg.report && msg.report.suggested_prompts && msg.report.suggested_prompts.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {msg.report.suggested_prompts.map((sp) => (
+                        <Button key={sp} size="sm" variant="ghost" className="text-xs" disabled={chatLoading} onClick={() => submitPrompt(sp)}>
+                          {sp}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <p className="text-sm text-muted-foreground animate-pulse">Generating report…</p>
+            )}
+          </div>
+        </ScrollArea>
 
 
         <form className="space-y-2" onSubmit={onSubmit}>
