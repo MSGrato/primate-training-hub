@@ -9,6 +9,7 @@ export default function Profile() {
   const { user, profile, role } = useAuth();
   const [jobTitle, setJobTitle] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [supervisorName, setSupervisorName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile?.job_title_id) return;
@@ -28,6 +29,28 @@ export default function Profile() {
     };
     fetchJobInfo();
   }, [profile]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchSupervisor = async () => {
+      const { data: mapping } = await supabase
+        .from("supervisor_employee_mappings")
+        .select("supervisor_id")
+        .eq("employee_id", user.id)
+        .maybeSingle();
+      if (!mapping?.supervisor_id) {
+        setSupervisorName(null);
+        return;
+      }
+      const { data: supProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", mapping.supervisor_id)
+        .maybeSingle();
+      setSupervisorName(supProfile?.full_name ?? null);
+    };
+    fetchSupervisor();
+  }, [user]);
 
   const roleLabel = role === "coordinator" ? "Training Coordinator" : role === "supervisor" ? "Supervisor" : "Employee";
 
@@ -54,6 +77,10 @@ export default function Profile() {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">Job Title</span>
             <span className="text-sm font-medium">{jobTitle || "Not assigned"}</span>
+          </div>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm text-muted-foreground">Supervisor</span>
+            <span className="text-sm font-medium">{supervisorName || "Not assigned"}</span>
           </div>
           {tags.length > 0 && (
             <div>
