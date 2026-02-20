@@ -67,6 +67,20 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Server-side password validation
+      if (typeof password !== "string" || password.length < 8) {
+        return new Response(JSON.stringify({ error: "Password must be at least 8 characters" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+        return new Response(JSON.stringify({ error: "Password must include an uppercase letter, a number, and a symbol" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
         email,
         password,
