@@ -39,6 +39,21 @@ export default function TrainingDetail() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [signedContentUrl, setSignedContentUrl] = useState<string | null>(null);
+
+  const resolveContentUrl = async (t: Training) => {
+    if (!t.content_url) return;
+    if (t.content_type === "file" && t.content_url.includes("/storage/")) {
+      // Extract object path from stored URL and generate a fresh signed URL
+      const match = t.content_url.match(/\/object\/(?:sign|public)\/training-materials\/(.+?)(?:\?|$)/);
+      if (match) {
+        const { data } = await supabase.storage.from("training-materials").createSignedUrl(match[1], 3600);
+        setSignedContentUrl(data?.signedUrl ?? t.content_url);
+        return;
+      }
+    }
+    setSignedContentUrl(t.content_url);
+  };
 
   const fetchData = async () => {
     if (!user || !trainingId) return;
@@ -54,8 +69,10 @@ export default function TrainingDetail() {
         .limit(1),
     ]);
 
-    setTraining(trainingData as Training | null);
+    const td = trainingData as Training | null;
+    setTraining(td);
     setCompletion(completionData?.[0] as Completion | null ?? null);
+    if (td) await resolveContentUrl(td);
     setLoading(false);
   };
 
@@ -157,7 +174,7 @@ export default function TrainingDetail() {
     return null;
   };
 
-  const viewerUrl = training.content_url ? getViewerUrl(training.content_url) : null;
+  const viewerUrl = signedContentUrl ? getViewerUrl(signedContentUrl) : null;
   const canMarkCompleteAgain =
     completion?.status === "approved" && training.frequency !== "one_time";
 
@@ -195,7 +212,7 @@ export default function TrainingDetail() {
         </Card>
       )}
 
-      {training.content_url && (
+      {signedContentUrl && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Training Material</CardTitle>
@@ -208,7 +225,7 @@ export default function TrainingDetail() {
               </Button>
             )}
             <Button asChild variant="outline" className="gap-2">
-              <a href={training.content_url} target="_blank" rel="noreferrer">
+              <a href={signedContentUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4" />
                 Open in New Tab
               </a>

@@ -212,7 +212,12 @@ export default function ManageTrainings() {
       return null;
     }
 
-    return supabase.storage.from("training-materials").getPublicUrl(objectPath).data.publicUrl;
+    const { data: signedData, error: signError } = await supabase.storage.from("training-materials").createSignedUrl(objectPath, 60 * 60 * 24 * 365);
+    if (signError || !signedData?.signedUrl) {
+      toast({ variant: "destructive", title: "Failed to generate file URL", description: signError?.message });
+      return null;
+    }
+    return signedData.signedUrl;
   };
 
   const parseBulkLinks = (value: string) => {
@@ -359,8 +364,20 @@ export default function ManageTrainings() {
     setBulkSaving(false);
   };
 
+  const isValidUrl = (url: string): boolean => {
+    if (!url) return true;
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:'].includes(parsed.protocol);
+    } catch { return false; }
+  };
+
   const handleSave = async () => {
     if (!form.title.trim()) { toast({ variant: "destructive", title: "Title is required" }); return; }
+    if (form.content_url.trim() && !materialFile && !isValidUrl(form.content_url.trim())) {
+      toast({ variant: "destructive", title: "Invalid URL", description: "URL must start with http:// or https://" });
+      return;
+    }
     setSaving(true);
 
     let nextContentUrl = form.content_url.trim();
