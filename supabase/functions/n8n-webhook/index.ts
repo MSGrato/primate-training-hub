@@ -41,16 +41,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Call n8n webhook
-    const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...payload,
-        triggered_by: claimsData.claims.sub,
-        triggered_at: new Date().toISOString(),
-      }),
-    });
+    // Call n8n webhook via GET with query params
+    const url = new URL(N8N_WEBHOOK_URL);
+    url.searchParams.set('triggered_by', claimsData.claims.sub);
+    url.searchParams.set('triggered_at', new Date().toISOString());
+    for (const [key, value] of Object.entries(payload)) {
+      url.searchParams.set(key, String(value));
+    }
+    const n8nResponse = await fetch(url.toString(), { method: 'GET' });
 
     const n8nResult = await n8nResponse.text();
 
