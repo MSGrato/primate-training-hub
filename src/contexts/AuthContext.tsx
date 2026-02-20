@@ -104,11 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updatePassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password,
-      data: { force_password_reset: false },
+    const { data, error } = await supabase.functions.invoke("update-password", {
+      body: { password },
     });
     if (error) throw error;
+    if (data?.error) throw new Error(data.error);
   };
 
   const signOut = async () => {
