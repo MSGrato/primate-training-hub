@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
 
 type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search";
 
@@ -78,10 +79,9 @@ export default function ReportChatAgent({
   const quickPrompts = useMemo(
     () => [
     "Show overdue trainings",
-    "Show due soon trainings in 30 days",
+    "What trainings should my team prioritize?",
     "Show completion rate by job title",
     "Find trainings about biosafety"],
-
     []
   );
 
@@ -270,7 +270,9 @@ export default function ReportChatAgent({
                       : "space-y-3"
                   }
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                  <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
 
                   {msg.report && msg.report.rows.length > 0 && (
                     <>
