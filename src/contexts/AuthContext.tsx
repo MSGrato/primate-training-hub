@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const INACTIVITY_MS = 10 * 60 * 1000; // 10 minutes
 
   const fetchProfileAndRole = async (userId: string) => {
     const [profileRes, roleRes] = await Promise.all([
@@ -90,6 +92,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Inactivity auto sign-out
+  useEffect(() => {
+    if (!session) {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      return;
+    }
+
+    const resetTimer = () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      inactivityTimer.current = setTimeout(async () => {
+        await supabase.auth.signOut();
+        toast({
+          title: "Signed out",
+          description: "You were signed out after 10 minutes of inactivity.",
+        });
+      }, INACTIVITY_MS);
+    };
+
+    const events = ["mousemove", "keydown", "pointerdown", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [session]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
