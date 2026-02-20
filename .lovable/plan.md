@@ -1,21 +1,26 @@
 
 
-# Fix User Management Page: Remove Missing `deactivated_at` Column References
+## Simplify Training Search Results
 
-## Problem
-The User Management page fails to load because the code queries a `deactivated_at` column from the `profiles` table, but this column does not exist in the database. The error is: `"column profiles.deactivated_at does not exist"`.
+**Goal**: When Agent Train returns training-only results (the `training_search` intent), show just `training_title` and `due_date` columns instead of the current columns (title, description, category, frequency, match_score).
 
-## Solution
-Remove all references to `deactivated_at` from `UserManagement.tsx`. The `profiles` table only has `is_active` (boolean) for tracking active/inactive status -- there is no timestamp column for when deactivation occurred.
+### Current Behavior
+The `training_search` intent returns rows with: `title`, `description`, `category`, `frequency`, `match_score`. These are catalog-level fields with no user-specific due date information.
 
-## Changes
+### Changes
 
-### File: `src/pages/dashboard/UserManagement.tsx`
+**File: `supabase/functions/report-chat/index.ts`**
 
-1. **Remove `deactivated_at` from the `UserRow` interface** (line 21)
-2. **Remove `deactivated_at` from both profile SELECT queries** (lines 72 and 120) -- change to `"user_id, full_name, net_id, is_active, job_title_id"`
-3. **Remove `deactivated_at` from the user mapping** (line 145)
-4. **Update the retention alerts filter** (line 153) -- remove the `deactivated_at` check and any date calculations that depend on it; either remove the retention alerts feature entirely or base it solely on `is_active`
-5. **Remove any UI rendering of `deactivated_at`** if present
+1. After finding matching trainings in the training_search block, cross-reference them with the caller's training assignments and completions to compute a `next_due_at` date for each training.
+2. Return rows with only two columns:
+   - `training_title` (renamed from `title`)
+   - `due_date` (computed from the user's assignment/completion data using the existing `buildStatus` logic)
+3. If a training has no assignment for the caller, `due_date` will show as `null` (displayed as "—" in the table).
 
-No database changes are needed -- the fix is purely in the frontend code.
+### Technical Details
+
+- Reuse the existing `buildStatus` helper to compute due dates based on frequency and last completion.
+- Query `user_training_assignments` and `training_completions` filtered to the caller's `user_id` and the matched training IDs.
+- Map each matched training to `{ training_title, due_date }`.
+- Sort by due date ascending (soonest due first), with nulls last.
+
