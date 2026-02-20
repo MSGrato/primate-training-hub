@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import SortableReportTable from "@/components/SortableReportTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -281,30 +282,7 @@ export default function ReportChatAgent({
                         <Badge variant="outline">Compliance: {msg.report.highlights.completion_rate}%</Badge>
                       </div>
 
-                      <div className="rounded-md border overflow-auto max-h-[300px]">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              {Object.keys(msg.report.rows[0]).map((header) => (
-                                <TableHead key={header} className="text-xs whitespace-nowrap">
-                                  {header.split("_").join(" ")}
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {msg.report.rows.slice(0, VISIBLE_CHAT_ROWS).map((row, idx) => (
-                              <TableRow key={idx}>
-                                {Object.values(row).map((val, ci) => (
-                                  <TableCell key={ci} className="text-xs whitespace-nowrap">
-                                    {renderValue(val)}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                      <SortableReportTable rows={msg.report.rows} maxRows={VISIBLE_CHAT_ROWS} />
 
                       {msg.report.rows.length > VISIBLE_CHAT_ROWS && (
                         <p className="text-xs text-muted-foreground">
