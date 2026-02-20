@@ -384,11 +384,9 @@ Deno.serve(async (req) => {
         const jobTitleName = profile?.job_title_id ? jobTitleNameById.get(profile.job_title_id) ?? "Unassigned" : "Unassigned";
 
         return {
-          user_id: a.user_id,
           net_id: profile?.net_id ?? "unknown",
           full_name: profile?.full_name ?? "Unknown User",
           job_title: jobTitleName,
-          training_id: a.training!.id,
           training_title: a.training!.title,
           category: a.training!.category,
           frequency: a.training!.frequency,
