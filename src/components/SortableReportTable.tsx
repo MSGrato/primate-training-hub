@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
@@ -112,35 +111,35 @@ export default function SortableReportTable({ rows, maxRows }: SortableReportTab
 
   return (
     <div className="rounded-md border overflow-auto max-h-[300px]">
-      <Table>
-        <TableHeader>
-          <TableRow>
+      <table className="w-full caption-bottom text-sm">
+        <thead className="[&_tr]:border-b">
+          <tr className="border-b transition-colors">
             {headers.map((header) => (
-              <TableHead
+              <th
                 key={header}
-                className="text-xs whitespace-nowrap cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                className="h-12 px-4 text-left align-middle font-medium [&:has([role=checkbox])]:pr-0 bg-secondary text-primary-foreground text-xs whitespace-nowrap cursor-pointer select-none hover:bg-muted/50 transition-colors"
                 onClick={() => handleSort(header)}
               >
                 <span className="inline-flex items-center">
                   {capitalizeHeader(header)}
                   <SortIcon column={header} />
                 </span>
-              </TableHead>
+              </th>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </tr>
+        </thead>
+        <tbody className="[&_tr:last-child]:border-0">
           {visibleRows.map((row, idx) => (
-            <TableRow key={idx}>
+            <tr key={idx} className="border-b transition-colors hover:bg-muted/50">
               {headers.map((header) => (
-                <TableCell key={header} className="text-xs whitespace-nowrap">
+                <td key={header} className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs whitespace-nowrap">
                   {renderValue(row[header], header)}
-                </TableCell>
+                </td>
               ))}
-            </TableRow>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   );
 }
