@@ -722,7 +722,7 @@ export default function ManageTrainings() {
                     Last Updated <SortIcon col="updated_at" />
                   </button>
                 </TableHead>
-                <TableHead className="w-28">Actions</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

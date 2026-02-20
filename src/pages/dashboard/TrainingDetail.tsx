@@ -235,7 +235,7 @@ export default function TrainingDetail() {
       )}
 
       <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-        <DialogContent className="max-w-5xl h-[85vh] flex flex-col">
+        <DialogContent className="max-w-5xl w-[95vw] h-[80vh] sm:h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Training Material Viewer</DialogTitle>
           </DialogHeader>

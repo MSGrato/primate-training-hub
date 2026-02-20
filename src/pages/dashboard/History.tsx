@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SortOption =
   | "date_desc"
@@ -38,6 +39,7 @@ interface HistoryRow {
 
 export default function History() {
   const { user, role } = useAuth();
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [nameFilter, setNameFilter] = useState("");
@@ -219,7 +221,7 @@ export default function History() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="history-name-filter">Name Filter</Label>
               <Input
@@ -346,52 +348,88 @@ export default function History() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Job Title</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Training</TableHead>
-                <TableHead>Completed Date</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRows.length === 0 ? (
+      {isMobile ? (
+        <div className="space-y-3">
+          {filteredRows.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No history records match the selected filters.
+              </CardContent>
+            </Card>
+          ) : (
+            filteredRows.map((row) => (
+              <Card key={row.id}>
+                <CardContent className="pt-4 pb-4 space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-sm">{row.employee_name}</p>
+                    {row.status === "approved" ? (
+                      <Badge className="bg-success text-success-foreground shrink-0">Approved</Badge>
+                    ) : row.status === "rejected" ? (
+                      <Badge className="bg-destructive text-destructive-foreground shrink-0">Rejected</Badge>
+                    ) : (
+                      <Badge variant="outline" className="shrink-0">Pending</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm">{row.training_title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(row.completed_at).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {row.department} · {row.job_title}
+                  </p>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No history records match the selected filters.
-                  </TableCell>
+                  <TableHead>Employee Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Job Title</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Training</TableHead>
+                  <TableHead>Completed Date</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ) : (
-                filteredRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.employee_name}</TableCell>
-                    <TableCell>{row.department}</TableCell>
-                    <TableCell>{row.job_title}</TableCell>
-                    <TableCell>{row.tags.length > 0 ? row.tags.join(", ") : "—"}</TableCell>
-                    <TableCell>{row.training_title}</TableCell>
-                    <TableCell>{new Date(row.completed_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      {row.status === "approved" ? (
-                        <Badge className="bg-success text-success-foreground">Approved</Badge>
-                      ) : row.status === "rejected" ? (
-                        <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>
-                      ) : (
-                        <Badge variant="outline">Pending</Badge>
-                      )}
+              </TableHeader>
+              <TableBody>
+                {filteredRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No history records match the selected filters.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : (
+                  filteredRows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{row.employee_name}</TableCell>
+                      <TableCell>{row.department}</TableCell>
+                      <TableCell>{row.job_title}</TableCell>
+                      <TableCell>{row.tags.length > 0 ? row.tags.join(", ") : "—"}</TableCell>
+                      <TableCell>{row.training_title}</TableCell>
+                      <TableCell>{new Date(row.completed_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {row.status === "approved" ? (
+                          <Badge className="bg-success text-success-foreground">Approved</Badge>
+                        ) : row.status === "rejected" ? (
+                          <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>
+                        ) : (
+                          <Badge variant="outline">Pending</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

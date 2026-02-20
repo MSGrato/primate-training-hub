@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Pencil } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UserRow {
   user_id: string;
@@ -38,6 +39,7 @@ interface RetentionAlert {
 const PAGE_SIZE = 500;
 
 export default function UserManagement() {
+  const isMobile = useIsMobile();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [filterJobTitleId, setFilterJobTitleId] = useState("all");
@@ -494,55 +496,92 @@ export default function UserManagement() {
           <div className="text-sm text-muted-foreground">
             Showing {displayedUsers.length} of {users.length} users
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>NetID</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Job Title</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {isMobile ? (
+            <div className="space-y-3">
               {displayedUsers.map((u) => (
-                <TableRow key={u.user_id}>
-                  <TableCell className="font-medium">{u.full_name}</TableCell>
-                  <TableCell>{u.net_id}</TableCell>
-                  <TableCell>
-                    <Badge className="bg-secondary text-secondary-foreground">{roleLabel(u.role)}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">{jobTitleName(u.job_title_id)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {getUserTags(u).length === 0 && <span className="text-sm text-muted-foreground">—</span>}
-                      {getUserTags(u).map((tag) => (
-                        <Badge key={`${u.user_id}-${tag}`} variant="secondary">{tag}</Badge>
-                      ))}
+                <Card key={u.user_id}>
+                  <CardContent className="pt-4 pb-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-sm">{u.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{u.net_id}</p>
+                      </div>
+                      <Badge className="bg-secondary text-secondary-foreground shrink-0">{roleLabel(u.role)}</Badge>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={u.is_active}
-                        onCheckedChange={() => handleToggleActive(u)}
-                      />
-                      <Badge variant={u.is_active ? "default" : "secondary"}>
-                        {u.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                    <p className="text-xs text-muted-foreground">{jobTitleName(u.job_title_id)}</p>
+                    {getUserTags(u).length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {getUserTags(u).map((tag) => (
+                          <Badge key={`${u.user_id}-${tag}`} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={u.is_active} onCheckedChange={() => handleToggleActive(u)} />
+                        <Badge variant={u.is_active ? "default" : "secondary"}>
+                          {u.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </CardContent>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>NetID</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Job Title</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {displayedUsers.map((u) => (
+                  <TableRow key={u.user_id}>
+                    <TableCell className="font-medium">{u.full_name}</TableCell>
+                    <TableCell>{u.net_id}</TableCell>
+                    <TableCell>
+                      <Badge className="bg-secondary text-secondary-foreground">{roleLabel(u.role)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">{jobTitleName(u.job_title_id)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {getUserTags(u).length === 0 && <span className="text-sm text-muted-foreground">—</span>}
+                        {getUserTags(u).map((tag) => (
+                          <Badge key={`${u.user_id}-${tag}`} variant="secondary">{tag}</Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={u.is_active}
+                          onCheckedChange={() => handleToggleActive(u)}
+                        />
+                        <Badge variant={u.is_active ? "default" : "secondary"}>
+                          {u.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

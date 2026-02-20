@@ -257,7 +257,7 @@ export default function ReportChatAgent({
         </form>
 
         {hasInteraction && (
-          <ScrollArea className="h-[420px] rounded-md border bg-muted/40 p-4">
+          <ScrollArea className="h-[260px] sm:h-[420px] rounded-md border bg-muted/40 p-4">
             <div className="space-y-1">
               {messages.map((msg, idx) => (
                 <div key={msg.id}>
