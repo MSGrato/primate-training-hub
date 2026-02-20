@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PrimateLogo } from "@/components/PrimateLogo";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ContactFooter } from "@/components/ContactFooter";
 
 export default function DashboardLayout() {
   const { session, loading } = useAuth();
@@ -45,6 +46,7 @@ export default function DashboardLayout() {
               <Outlet />
             </div>
           </div>
+          <ContactFooter />
         </main>
       </div>
     </SidebarProvider>

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrimateLogo } from "@/components/PrimateLogo";
 import { useToast } from "@/hooks/use-toast";
+import { ContactFooter } from "@/components/ContactFooter";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -40,7 +41,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-primary">
+    <div className="flex min-h-screen flex-col bg-primary">
+      <div className="flex flex-1 items-center justify-center">
       <Card className="w-full max-w-md mx-4 shadow-2xl">
         <CardHeader className="text-center space-y-4 pb-2">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary">
@@ -73,6 +75,8 @@ export default function ForgotPassword() {
           </form>
         </CardContent>
       </Card>
+      </div>
+      <ContactFooter />
     </div>
   );
 }
