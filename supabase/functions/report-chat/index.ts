@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 type AppRole = "employee" | "supervisor" | "coordinator";
-type Intent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search" | "recommendations" | "general";
+type Intent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search" | "recommendations" | "employee_search" | "general";
 
 type ScopeProfile = {
   user_id: string;
@@ -84,10 +84,10 @@ async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQ
           properties: {
             intent: {
               type: "string",
-              enum: ["summary", "overdue", "due_soon", "completion_rate", "by_job_title", "training_search", "recommendations", "general"],
-              description: "summary=general training status overview, overdue=show overdue trainings, due_soon=show trainings due soon, completion_rate=compliance rates, by_job_title=breakdown by job title, training_search=search for specific trainings by name/topic, recommendations=suggest which trainings to prioritize, general=general question or conversation",
+              enum: ["summary", "overdue", "due_soon", "completion_rate", "by_job_title", "training_search", "recommendations", "employee_search", "general"],
+              description: "summary=general training status overview, overdue=show overdue trainings, due_soon=show trainings due soon, completion_rate=compliance rates, by_job_title=breakdown by job title, training_search=search for specific trainings by name/topic, recommendations=suggest which trainings to prioritize, employee_search=search/list employees by name/netid/job title/role/supervisor/tags or show employee details, general=general question or conversation",
             },
-            search_query: { type: "string", description: "If training_search, the search keywords. Otherwise empty string." },
+            search_query: { type: "string", description: "If training_search or employee_search, the search keywords. Otherwise empty string." },
             days_window: { type: "number", description: "Number of days for due_soon window. Default 60." },
             net_id_filter: { type: "string", description: "If the user asks about a specific person by NetID, the NetID. Otherwise null.", nullable: true },
           },
@@ -99,7 +99,7 @@ async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQ
   ];
 
   const result = await callAI(
-    "You classify training management prompts. Classify the user's intent accurately. Use 'general' only for questions unrelated to specific training data queries.",
+    "You classify training management and employee information prompts. Classify the user's intent accurately. Use 'employee_search' when the user asks about employees, staff, people, roles, supervisors, job titles, or team composition. Use 'general' only for questions unrelated to specific training or employee data queries.",
     prompt,
     tools,
     { type: "function", function: { name: "classify" } },
@@ -306,6 +306,102 @@ Deno.serve(async (req) => {
         highlights: { total_assignments: matches.length, compliant: 0, overdue: 0, due_soon: 0, not_started: 0, completion_rate: 0 },
         rows: matches,
         suggested_prompts: ["Find trainings about biosafety", "Show overdue trainings", "What trainings should I prioritize?"],
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── Employee search ──
+    if (intent === "employee_search") {
+      if (callerRole === "employee") {
+        return new Response(JSON.stringify({ error: "Employees cannot search other employee records." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Build scoped employee list
+      let empProfiles: ScopeProfile[] = [];
+      if (callerRole === "coordinator") {
+        const { data, error } = await supabase.from("profiles").select("user_id,full_name,net_id,job_title_id,is_active");
+        if (error) throw new Error(error.message);
+        empProfiles = (data ?? []) as ScopeProfile[];
+      } else {
+        // supervisor – own reports + self
+        const { data: mappings } = await supabase.from("supervisor_employee_mappings").select("employee_id").eq("supervisor_id", callerId);
+        const scopedIds = Array.from(new Set([callerId, ...(mappings ?? []).map(m => m.employee_id)]));
+        const { data, error } = await supabase.from("profiles").select("user_id,full_name,net_id,job_title_id,is_active").in("user_id", scopedIds);
+        if (error) throw new Error(error.message);
+        empProfiles = (data ?? []) as ScopeProfile[];
+      }
+
+      // Fetch supporting data in parallel
+      const [jobTitlesRes, rolesRes, supervisorMappingsRes, jobTitleTagsRes, jobTagsRes] = await Promise.all([
+        supabase.from("job_titles").select("id,name"),
+        supabase.from("user_roles").select("user_id,role").in("user_id", empProfiles.map(p => p.user_id)),
+        supabase.from("supervisor_employee_mappings").select("employee_id,supervisor_id").in("employee_id", empProfiles.map(p => p.user_id)),
+        supabase.from("job_title_tags").select("job_title_id,job_tag_id"),
+        supabase.from("job_tags").select("id,name"),
+      ]);
+
+      const jobTitleMap = new Map<string, string>((jobTitlesRes.data ?? []).map(t => [t.id, t.name]));
+      const roleMap = new Map<string, string>((rolesRes.data ?? []).map(r => [r.user_id, r.role]));
+      const supervisorMap = new Map<string, string>();
+      for (const m of (supervisorMappingsRes.data ?? [])) {
+        const supProfile = empProfiles.find(p => p.user_id === m.supervisor_id);
+        if (supProfile) supervisorMap.set(m.employee_id, supProfile.full_name);
+        else {
+          // supervisor might not be in empProfiles scope, look them up
+          const { data: sp } = await supabase.from("profiles").select("full_name").eq("user_id", m.supervisor_id).maybeSingle();
+          if (sp) supervisorMap.set(m.employee_id, sp.full_name);
+        }
+      }
+      const tagNameMap = new Map<string, string>((jobTagsRes.data ?? []).map(t => [t.id, t.name]));
+      const titleTagsMap = new Map<string, string[]>();
+      for (const jtt of (jobTitleTagsRes.data ?? [])) {
+        const tagName = tagNameMap.get(jtt.job_tag_id);
+        if (tagName) {
+          const existing = titleTagsMap.get(jtt.job_title_id) ?? [];
+          existing.push(tagName);
+          titleTagsMap.set(jtt.job_title_id, existing);
+        }
+      }
+
+      // Build employee rows
+      const query = classification.searchQuery.toLowerCase();
+      const queryTokens = query.split(/\s+/).map(t => t.trim()).filter(t => t.length >= 2);
+
+      const empRows = empProfiles.map(p => {
+        const jobTitle = p.job_title_id ? jobTitleMap.get(p.job_title_id) ?? "Unassigned" : "Unassigned";
+        const role = roleMap.get(p.user_id) ?? "employee";
+        const supervisor = supervisorMap.get(p.user_id) ?? "None";
+        const tags = p.job_title_id ? (titleTagsMap.get(p.job_title_id) ?? []).join(", ") : "";
+        return {
+          net_id: p.net_id,
+          full_name: p.full_name,
+          job_title: jobTitle,
+          role,
+          supervisor,
+          tags,
+          is_active: p.is_active ? "Active" : "Inactive",
+        };
+      });
+
+      // Filter by search query if provided
+      const filtered = queryTokens.length === 0 ? empRows : empRows.filter(r => {
+        const haystack = [r.net_id, r.full_name, r.job_title, r.role, r.supervisor, r.tags, r.is_active].join(" ").toLowerCase();
+        return queryTokens.some(tk => haystack.includes(tk));
+      });
+
+      filtered.sort((a, b) => a.full_name.localeCompare(b.full_name));
+      const resultRows = filtered.slice(0, 200);
+
+      const dataCtx = `Found ${resultRows.length} employees${queryTokens.length > 0 ? ` matching "${query}"` : ""}. Employee details: ${resultRows.slice(0, 15).map(r => `${r.full_name} (${r.net_id}), ${r.job_title}, ${r.role}, supervisor: ${r.supervisor}, tags: ${r.tags || "none"}, ${r.is_active}`).join("; ")}`;
+      const aiSummary = await generateAISummary(prompt, dataCtx);
+
+      return new Response(JSON.stringify({
+        intent, summary: aiSummary,
+        scope: { role: callerRole, users: resultRows.length, dueSoonDays: dueSoonDays, net_id_filter: requestedNetId },
+        highlights: { total_assignments: resultRows.length, compliant: 0, overdue: 0, due_soon: 0, not_started: 0, completion_rate: 0 },
+        rows: resultRows,
+        suggested_prompts: ["Show all supervisors", "Who has the most overdue trainings?", "List employees by job title"],
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

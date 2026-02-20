@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 
-type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search";
+type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search" | "employee_search";
 
 type ChatRow = Record<string, unknown>;
 
@@ -74,9 +74,9 @@ export default function ReportChatAgent({
   const quickPrompts = useMemo(
     () => [
     "Show overdue trainings",
+    "List all employees",
     "What trainings should my team prioritize?",
-    "Show completion rate by job title",
-    "Find trainings about biosafety"],
+    "Show completion rate by job title"],
     []
   );
 
