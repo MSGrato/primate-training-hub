@@ -35,7 +35,25 @@ type SortableReportTableProps = {
 export default function SortableReportTable({ rows, maxRows }: SortableReportTableProps) {
   const [sort, setSort] = useState<SortState>(null);
 
-  const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+  const headers = useMemo(() => {
+    if (rows.length === 0) return [];
+    const keys = Object.keys(rows[0]);
+    // Preferred display order for report columns
+    const preferredOrder = [
+      "net_id", "full_name", "job_title", "training_title", "category",
+      "frequency", "status", "last_completed_at", "next_due_at",
+      "total", "compliant", "overdue", "due_soon", "not_started", "completion_rate",
+      "training_name", "due_date", "match_score",
+    ];
+    return keys.sort((a, b) => {
+      const ai = preferredOrder.indexOf(a);
+      const bi = preferredOrder.indexOf(b);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  }, [rows]);
 
   const sortedRows = useMemo(() => {
     if (!sort) return rows;
