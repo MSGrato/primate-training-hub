@@ -1,26 +1,26 @@
 
 
-## Simplify Training Search Results
+## Rearrange Chat Layout: Input on Top, Results Hidden Until Needed
 
-**Goal**: When Agent Train returns training-only results (the `training_search` intent), show just `training_title` and `due_date` columns instead of the current columns (title, description, category, frequency, match_score).
+**Goal**: Keep the quick prompt buttons where they are. Move the text input and Ask button above the chat results window. Hide the results window until a question has been asked.
 
-### Current Behavior
-The `training_search` intent returns rows with: `title`, `description`, `category`, `frequency`, `match_score`. These are catalog-level fields with no user-specific due date information.
+### Current Layout (top to bottom)
+1. Quick prompt buttons
+2. ScrollArea (chat/results) -- always visible
+3. Text input + Ask button
+
+### New Layout (top to bottom)
+1. Quick prompt buttons
+2. Text input + Ask button (moved up)
+3. ScrollArea (chat/results) -- hidden until first interaction
 
 ### Changes
 
-**File: `supabase/functions/report-chat/index.ts`**
+**File: `src/components/ReportChatAgent.tsx`**
 
-1. After finding matching trainings in the training_search block, cross-reference them with the caller's training assignments and completions to compute a `next_due_at` date for each training.
-2. Return rows with only two columns:
-   - `training_title` (renamed from `title`)
-   - `due_date` (computed from the user's assignment/completion data using the existing `buildStatus` logic)
-3. If a training has no assignment for the caller, `due_date` will show as `null` (displayed as "—" in the table).
+1. Add a derived boolean: `const hasInteraction = messages.length > 0 || chatLoading;`
+2. Move the `<form>` block (lines 325-338) to right after the quick prompt buttons (after line 260), before the ScrollArea.
+3. Wrap the `<ScrollArea>` block (lines 262-322) in `{hasInteraction && ( ... )}` so it only appears once a question has been submitted or is loading.
 
-### Technical Details
-
-- Reuse the existing `buildStatus` helper to compute due dates based on frequency and last completion.
-- Query `user_training_assignments` and `training_completions` filtered to the caller's `user_id` and the matched training IDs.
-- Map each matched training to `{ training_title, due_date }`.
-- Sort by due date ascending (soonest due first), with nulls last.
+No logic, data, or styling changes beyond this reorder and conditional render.
 
