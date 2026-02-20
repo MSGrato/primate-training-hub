@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User } from "lucide-react";
+import { User, Users } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function Profile() {
   const { user, profile, role } = useAuth();
   const [jobTitle, setJobTitle] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [supervisorName, setSupervisorName] = useState<string | null>(null);
+  const [employees, setEmployees] = useState<{ full_name: string; net_id: string }[]>([]);
 
   useEffect(() => {
     if (!profile?.job_title_id) return;
@@ -51,6 +53,23 @@ export default function Profile() {
     };
     fetchSupervisor();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || (role !== "supervisor" && role !== "coordinator")) return;
+    const fetchEmployees = async () => {
+      const { data: mappings } = await supabase
+        .from("supervisor_employee_mappings")
+        .select("employee_id")
+        .eq("supervisor_id", user.id);
+      if (!mappings?.length) { setEmployees([]); return; }
+      const { data: empProfiles } = await supabase
+        .from("profiles")
+        .select("full_name, net_id")
+        .in("user_id", mappings.map(m => m.employee_id));
+      setEmployees(empProfiles || []);
+    };
+    fetchEmployees();
+  }, [user, role]);
 
   const roleLabel = role === "coordinator" ? "Training Coordinator" : role === "supervisor" ? "Supervisor" : "Employee";
 
@@ -98,6 +117,38 @@ export default function Profile() {
           </div>
         </CardContent>
       </Card>
+      {(role === "supervisor" || role === "coordinator") && (
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg">My Employees</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {employees.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No employees assigned</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Net ID</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((emp) => (
+                    <TableRow key={emp.net_id}>
+                      <TableCell>{emp.full_name}</TableCell>
+                      <TableCell>{emp.net_id}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
