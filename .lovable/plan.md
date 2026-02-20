@@ -1,26 +1,42 @@
 
 
-## Rearrange Chat Layout: Input on Top, Results Hidden Until Needed
+## Show Assigned Employees on Supervisor Profile
 
-**Goal**: Keep the quick prompt buttons where they are. Move the text input and Ask button above the chat results window. Hide the results window until a question has been asked.
+When a supervisor or coordinator views their profile, they will see a list of employees assigned to them below the existing profile card.
 
-### Current Layout (top to bottom)
-1. Quick prompt buttons
-2. ScrollArea (chat/results) -- always visible
-3. Text input + Ask button
+### What Changes
 
-### New Layout (top to bottom)
-1. Quick prompt buttons
-2. Text input + Ask button (moved up)
-3. ScrollArea (chat/results) -- hidden until first interaction
+**Profile Page (`src/pages/dashboard/Profile.tsx`)**
+- Add a new `useEffect` that runs when the user has a "supervisor" or "coordinator" role
+- Query `supervisor_employee_mappings` to get all `employee_id` values where `supervisor_id` matches the current user
+- Join with `profiles` to get each employee's `full_name` and `net_id`
+- Display the list in a new Card below the existing profile card, with a heading like "My Employees"
+- Each employee shown as a row with their name and Net ID
+- If no employees are assigned, show "No employees assigned"
+- Only visible to users with the supervisor or coordinator role
 
-### Changes
+### No Database Changes Needed
 
-**File: `src/components/ReportChatAgent.tsx`**
+The existing RLS policy `"Supervisors can view own mappings"` already allows supervisors to query their own mappings. Supervisors can also view employee profiles via the `"Supervisors can view employee profiles"` policy. Coordinators have full access. No migration is required.
 
-1. Add a derived boolean: `const hasInteraction = messages.length > 0 || chatLoading;`
-2. Move the `<form>` block (lines 325-338) to right after the quick prompt buttons (after line 260), before the ScrollArea.
-3. Wrap the `<ScrollArea>` block (lines 262-322) in `{hasInteraction && ( ... )}` so it only appears once a question has been submitted or is loading.
+### Technical Details
 
-No logic, data, or styling changes beyond this reorder and conditional render.
+```text
+Profile Page Layout
++---------------------------+
+| My Profile                |
+| [existing profile card]   |
++---------------------------+
+| My Employees (if sup/coord)|
+| - Employee Name (net_id)  |
+| - Employee Name (net_id)  |
+| ...                       |
++---------------------------+
+```
+
+Data fetching approach:
+1. Query `supervisor_employee_mappings` where `supervisor_id = user.id`
+2. Collect all `employee_id` values
+3. Query `profiles` where `user_id` is in that list
+4. Display results in a simple table or list
 
