@@ -47,6 +47,7 @@ type ChatMessage = {
 type ReportChatAgentProps = {
   title?: string;
   description?: string;
+  initialPrompt?: string;
 };
 
 const VISIBLE_CHAT_ROWS = 20;
@@ -62,7 +63,8 @@ function escapeHtml(value: string) {
 
 export default function ReportChatAgent({
   title = "Report Chat",
-  description = "Generate live training reports using app data and your role-based access scope."
+  description = "Generate live training reports using app data and your role-based access scope.",
+  initialPrompt,
 }: ReportChatAgentProps) {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
@@ -70,6 +72,14 @@ export default function ReportChatAgent({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { toast } = useToast();
   const hasInteraction = messages.length > 0 || chatLoading;
+  const initialPromptFired = useRef(false);
+
+  useEffect(() => {
+    if (initialPrompt && !initialPromptFired.current && user) {
+      initialPromptFired.current = true;
+      submitPrompt(initialPrompt);
+    }
+  }, [initialPrompt, user]);
 
   const quickPrompts = useMemo(
     () => [
