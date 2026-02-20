@@ -6,7 +6,6 @@ import SortableReportTable from "@/components/SortableReportTable";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
@@ -257,7 +256,7 @@ export default function ReportChatAgent({
         </form>
 
         {hasInteraction && (
-          <ScrollArea className="h-[260px] sm:h-[420px] rounded-md border bg-muted/40 p-4">
+          <div className="h-[260px] sm:h-[420px] overflow-y-auto rounded-md border bg-muted/40 p-4">
             <div className="space-y-1">
               {messages.map((msg, idx) => (
                 <div key={msg.id}>
@@ -300,7 +299,7 @@ export default function ReportChatAgent({
                 <p className="text-sm text-muted-foreground animate-pulse">Generating report…</p>
               )}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </CardContent>
     </Card>
