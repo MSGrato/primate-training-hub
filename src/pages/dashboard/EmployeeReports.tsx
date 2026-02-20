@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +14,7 @@ type SortDir = "asc" | "desc";
 
 export default function EmployeeReports() {
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState<any[]>([]);
   const [jobTitles, setJobTitles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,7 +171,13 @@ export default function EmployeeReports() {
                     </TableCell>
                     <TableCell>
                       {e.is_active ? (
-                        <Badge variant="outline">View Report</Badge>
+                        <Badge
+                          variant="outline"
+                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                          onClick={() => navigate(`/dashboard/report-agent?employee=${encodeURIComponent(e.full_name)}`)}
+                        >
+                          View Report
+                        </Badge>
                       ) : (
                         <Badge variant="secondary">Inactive</Badge>
                       )}
