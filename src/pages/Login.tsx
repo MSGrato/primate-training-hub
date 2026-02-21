@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrimateLogo } from "@/components/PrimateLogo";
 import { useToast } from "@/hooks/use-toast";
-import { ContactFooter } from "@/components/ContactFooter";
 
 const DEMO_ACCOUNTS = [
   { label: "Employee", email: "employee@uw.edu", password: "demo1234" },
@@ -123,7 +122,6 @@ export default function Login() {
         </CardContent>
       </Card>
       </div>
-      <ContactFooter />
     </div>
   );
 }
