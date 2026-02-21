@@ -1,26 +1,22 @@
 
 
-# Switch Agent Train AI Model to Gemini
+# Fix and Deploy report-chat
 
-## Change
+## Issue
+Line 1 of `supabase/functions/report-chat/index.ts` has a typo: `iimport` instead of `import`, causing a parse error.
 
-Update the `callAI` function in `supabase/functions/report-chat/index.ts` to use Google Gemini instead of OpenAI GPT-5.
+## Fix
+**File**: `supabase/functions/report-chat/index.ts`, line 1
 
-**Line 46** — change:
+Change:
 ```
-model: "openai/gpt-5"
+iimport { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 ```
 to:
 ```
-model: "google/gemini-3-flash-preview"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 ```
 
-This is a single-line change. The Lovable AI Gateway handles both models with the same API format, so no other code changes are needed.
-
-## Technical Details
-
-- **File**: `supabase/functions/report-chat/index.ts`, line 46
-- **Old model**: `openai/gpt-5`
-- **New model**: `google/gemini-3-flash-preview` (Google's latest fast model with strong reasoning and tool-calling support)
-- The edge function will be redeployed automatically after the change
+## After Fix
+Redeploy the `report-chat` edge function.
 
