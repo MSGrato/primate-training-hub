@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_train_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          intent: string | null
+          prompt: string
+          rating: number
+          response_summary: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intent?: string | null
+          prompt: string
+          rating: number
+          response_summary: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intent?: string | null
+          prompt?: string
+          rating?: number
+          response_summary?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       job_tags: {
         Row: {
           created_at: string
