@@ -43,7 +43,7 @@ async function callAI(systemPrompt: string, userPrompt: string, toolDefs?: unkno
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
   const body: Record<string, unknown> = {
-    model: "google/gemini-3-flash-preview",
+    model: "google/gemini-2.0-flash",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
