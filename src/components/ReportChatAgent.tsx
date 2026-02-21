@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ThumbsUp, ThumbsDown } from "lucide-react";
 
 type ChatIntent = "summary" | "overdue" | "due_soon" | "completion_rate" | "by_job_title" | "training_search" | "employee_search";
 
@@ -69,9 +69,22 @@ export default function ReportChatAgent({
   const [prompt, setPrompt] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [ratings, setRatings] = useState<Record<string, 1 | -1>>({});
   const { toast } = useToast();
   const hasInteraction = messages.length > 0 || chatLoading;
   const initialPromptFired = useRef(false);
+
+  const submitFeedback = async (msg: ChatMessage, rating: 1 | -1, precedingPrompt: string) => {
+    if (!user || ratings[msg.id]) return;
+    setRatings((prev) => ({ ...prev, [msg.id]: rating }));
+    await supabase.from("agent_train_feedback").insert({
+      user_id: user.id,
+      prompt: precedingPrompt,
+      response_summary: msg.text,
+      intent: msg.report?.intent ?? null,
+      rating,
+    });
+  };
 
   useEffect(() => {
     if (initialPrompt && !initialPromptFired.current && user) {
@@ -290,6 +303,41 @@ export default function ReportChatAgent({
                           disabled={chatLoading}
                           onSelect={submitPrompt}
                         />
+                      )}
+
+                      {msg.role === "assistant" && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            title="Helpful"
+                            disabled={!!ratings[msg.id]}
+                            onClick={() => {
+                              const precedingPrompt = messages[idx - 1]?.text ?? "";
+                              submitFeedback(msg, 1, precedingPrompt);
+                            }}
+                            className={`rounded p-1 transition-colors ${
+                              ratings[msg.id] === 1
+                                ? "text-green-600"
+                                : "text-muted-foreground hover:text-green-600"
+                            } disabled:opacity-50`}
+                          >
+                            <ThumbsUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            title="Not helpful"
+                            disabled={!!ratings[msg.id]}
+                            onClick={() => {
+                              const precedingPrompt = messages[idx - 1]?.text ?? "";
+                              submitFeedback(msg, -1, precedingPrompt);
+                            }}
+                            className={`rounded p-1 transition-colors ${
+                              ratings[msg.id] === -1
+                                ? "text-destructive"
+                                : "text-muted-foreground hover:text-destructive"
+                            } disabled:opacity-50`}
+                          >
+                            <ThumbsDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
