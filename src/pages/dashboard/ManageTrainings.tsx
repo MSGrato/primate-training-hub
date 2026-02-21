@@ -212,7 +212,7 @@ export default function ManageTrainings() {
       return null;
     }
 
-    const { data: signedData, error: signError } = await supabase.storage.from("training-materials").createSignedUrl(objectPath, 60 * 60 * 24 * 365);
+    const { data: signedData, error: signError } = await supabase.storage.from("training-materials").createSignedUrl(objectPath, 60 * 60 * 48);
     if (signError || !signedData?.signedUrl) {
       toast({ variant: "destructive", title: "Failed to generate file URL", description: signError?.message });
       return null;
