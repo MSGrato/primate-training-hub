@@ -256,7 +256,7 @@ export default function ReportChatAgent({
         </form>
 
         {hasInteraction && (
-          <div className="h-[260px] sm:h-[420px] overflow-y-auto rounded-md border bg-muted/40 p-4">
+          <div className="rounded-md border bg-muted/40 p-4">
             <div className="space-y-1">
               {messages.map((msg, idx) => (
                 <div key={msg.id}>

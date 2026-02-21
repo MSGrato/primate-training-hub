@@ -72,7 +72,7 @@ async function callAI(systemPrompt: string, userPrompt: string, toolDefs?: unkno
   return await resp.json();
 }
 
-async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQuery: string; daysWindow: number; netIdFilter: string | null }> {
+async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQuery: string; daysWindow: number; netIdFilter: string | null; nameFilter: string | null }> {
   const tools = [
     {
       type: "function",
@@ -90,6 +90,7 @@ async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQ
             search_query: { type: "string", description: "If training_search or employee_search, the search keywords. Otherwise empty string." },
             days_window: { type: "number", description: "Number of days for due_soon window. Default 60." },
             net_id_filter: { type: "string", description: "If the user asks about a specific person by NetID, the NetID. Otherwise null.", nullable: true },
+            name_filter: { type: "string", description: "If the user asks about a specific person by name (e.g. 'pull Jane Smith\\'s report', 'training report for John Doe'), extract only their full name. Otherwise null.", nullable: true },
           },
           required: ["intent", "search_query", "days_window"],
           additionalProperties: false,
@@ -99,7 +100,7 @@ async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQ
   ];
 
   const result = await callAI(
-    "You classify training management and employee information prompts. Classify the user's intent accurately. Use 'employee_search' when the user asks about employees, staff, people, roles, supervisors, job titles, or team composition. Use 'general' only for questions unrelated to specific training or employee data queries.",
+    "You classify training management and employee information prompts. Classify the user's intent accurately. Use 'employee_search' when the user asks about employees, staff, people, roles, supervisors, job titles, or team composition. Use 'general' only for questions unrelated to specific training or employee data queries. When the user references a specific person by name (not NetID), extract that name into name_filter.",
     prompt,
     tools,
     { type: "function", function: { name: "classify" } },
@@ -115,12 +116,13 @@ async function classifyIntent(prompt: string): Promise<{ intent: Intent; searchQ
         searchQuery: args.search_query ?? "",
         daysWindow: args.days_window ?? 60,
         netIdFilter: args.net_id_filter ?? null,
+        nameFilter: args.name_filter ?? null,
       };
     }
   } catch (e) {
     console.error("Intent classification parse error:", e);
   }
-  return { intent: "summary", searchQuery: "", daysWindow: 60, netIdFilter: null };
+  return { intent: "summary", searchQuery: "", daysWindow: 60, netIdFilter: null, nameFilter: null };
 }
 
 async function generateAISummary(prompt: string, dataContext: string): Promise<string> {
@@ -239,7 +241,7 @@ Deno.serve(async (req) => {
 
     // AI-powered intent classification
     const classification = await classifyIntent(prompt);
-    const requestedPersonName = extractRequestedPersonName(prompt);
+    const requestedPersonName = extractRequestedPersonName(prompt) ?? classification.nameFilter;
     let intent = classification.intent;
     // If the user explicitly asks for a training report for a person, run the training-report path.
     if (requestedPersonName && (intent === "employee_search" || intent === "general")) {

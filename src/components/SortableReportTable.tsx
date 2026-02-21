@@ -110,7 +110,7 @@ export default function SortableReportTable({ rows, maxRows }: SortableReportTab
   };
 
   return (
-    <div className="rounded-md border overflow-auto max-h-[300px]">
+    <div className="rounded-md border overflow-x-auto">
       <table className="w-full caption-bottom text-sm">
         <thead className="[&_tr]:border-b">
           <tr className="border-b transition-colors">
