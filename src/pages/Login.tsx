@@ -9,6 +9,12 @@ import { PrimateLogo } from "@/components/PrimateLogo";
 import { useToast } from "@/hooks/use-toast";
 import { ContactFooter } from "@/components/ContactFooter";
 
+const DEMO_ACCOUNTS = [
+  { label: "Employee", email: "employee@uw.edu", password: "demo1234" },
+  { label: "Supervisor", email: "supervisor@uw.edu", password: "demo1234" },
+  { label: "Coordinator", email: "coordinator@uw.edu", password: "demo1234" },
+];
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,6 +90,36 @@ export default function Login() {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Try a demo account</span>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.label}
+                  type="button"
+                  onClick={() => {
+                    setEmail(account.email);
+                    setPassword(account.password);
+                  }}
+                  className="rounded-md border bg-muted/50 px-2 py-2 text-center text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <div className="font-medium">{account.label}</div>
+                  <div className="mt-0.5 truncate opacity-70">{account.email}</div>
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Click a role to fill in the credentials, then sign in.
+            </p>
+          </div>
         </CardContent>
       </Card>
       </div>
