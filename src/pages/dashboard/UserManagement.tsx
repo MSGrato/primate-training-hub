@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Pencil } from "lucide-react";
+import { UserPlus, Pencil, Upload } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UserRow {
@@ -68,6 +69,22 @@ export default function UserManagement() {
     () => users.filter((u) => u.role === "supervisor" || u.role === "coordinator"),
     [users]
   );
+
+  // CSV import state
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importProgress, setImportProgress] = useState<string | null>(null);
+
+  interface ParsedCsvUser {
+    full_name: string; net_id: string; email: string; role: string;
+    job_title_name: string; password: string; supervisor_net_id: string;
+  }
+  interface ImportPreview {
+    toDelete: UserRow[];
+    toImport: ParsedCsvUser[];
+    unresolvedSupervisors: string[];
+  }
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
 
   // Supervisor mappings
   const [supervisorMappings, setSupervisorMappings] = useState<Map<string, string>>(new Map());
@@ -234,6 +251,105 @@ export default function UserManagement() {
       await supabase
         .from("supervisor_employee_mappings")
         .insert({ employee_id: employeeId, supervisor_id: supervisorId });
+    }
+  };
+
+  const parseCSV = (text: string): ParsedCsvUser[] => {
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    // Skip header row (index 0)
+    return lines.slice(1).map((line) => {
+      const cols = line.split(",");
+      return {
+        full_name: (cols[0] || "").trim(),
+        net_id: (cols[1] || "").trim(),
+        email: (cols[2] || "").trim(),
+        role: (cols[3] || "").trim(),
+        job_title_name: (cols[4] || "").trim(),
+        password: (cols[5] || "").trim(),
+        supervisor_net_id: (cols[7] || "").trim(),
+      };
+    }).filter((r) => r.net_id && r.email);
+  };
+
+  const handleCsvFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const parsed = parseCSV(text);
+
+      const toDelete = users.filter((u) => u.role !== "coordinator");
+      const toImport = parsed.filter((r) => r.role.toLowerCase() !== "coordinator");
+
+      const csvNetIds = new Set(parsed.map((r) => r.net_id));
+      csvNetIds.add("admin"); // coordinator is already in the DB
+      const unresolvedSupervisors = [
+        ...new Set(
+          parsed
+            .filter((r) => r.supervisor_net_id && r.supervisor_net_id !== r.net_id)
+            .map((r) => r.supervisor_net_id)
+            .filter((netId) => !csvNetIds.has(netId))
+        ),
+      ];
+
+      setImportPreview({ toDelete, toImport, unresolvedSupervisors });
+      setImportOpen(true);
+    };
+    reader.readAsText(file);
+    // Reset file input so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview) return;
+    setSubmitting(true);
+    try {
+      // Step 1: Delete non-coordinator users one by one
+      for (let i = 0; i < importPreview.toDelete.length; i++) {
+        const u = importPreview.toDelete[i];
+        setImportProgress(`Deleting ${i + 1} of ${importPreview.toDelete.length}: ${u.full_name}…`);
+        try {
+          await invokeManageUsers({ action: "delete", user_id: u.user_id });
+        } catch {
+          // Continue on individual delete failure
+        }
+      }
+
+      // Step 2: Bulk import all CSV users in one request
+      setImportProgress(`Importing ${importPreview.toImport.length} users…`);
+      let importResult: any = null;
+      try {
+        importResult = await invokeManageUsers({ action: "bulk-import", users: importPreview.toImport });
+      } catch (e: any) {
+        toast({ title: "Import error", description: e.message, variant: "destructive" });
+        return;
+      }
+
+      // Step 3: Refresh
+      setImportProgress("Refreshing user list…");
+      await fetchUsers();
+      await fetchSupervisorMappings();
+
+      // Step 4: Summary toast
+      const results: any[] = importResult?.results || [];
+      const created = results.filter((r) => r.status === "created").length;
+      const skipped = results.filter((r) => r.status === "skipped").length;
+      const errors = results.filter((r) => r.status === "error").length;
+      const warnings = (importResult?.mapping_warnings || []).length;
+      toast({
+        title: "Import complete",
+        description:
+          `Deleted ${importPreview.toDelete.length} · Created ${created} · Skipped ${skipped}` +
+          (errors > 0 ? ` · Errors ${errors}` : "") +
+          (warnings > 0 ? ` · ${warnings} mapping warning(s)` : ""),
+      });
+
+      setImportOpen(false);
+      setImportPreview(null);
+      setImportProgress(null);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -422,9 +538,23 @@ export default function UserManagement() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">User Management</h1>
-        <Button className="w-full sm:w-auto" onClick={() => { resetForm(); setAddOpen(true); }}>
-          <UserPlus className="mr-2 h-4 w-4" />Add User
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" className="w-full sm:w-auto"
+            onClick={() => csvFileInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />Import CSV
+          </Button>
+          <Button className="w-full sm:w-auto"
+            onClick={() => { resetForm(); setAddOpen(true); }}>
+            <UserPlus className="mr-2 h-4 w-4" />Add User
+          </Button>
+        </div>
+        <input
+          ref={csvFileInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={handleCsvFileSelected}
+        />
       </div>
 
       {retentionAlerts.length > 0 && (
@@ -649,6 +779,85 @@ export default function UserManagement() {
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button onClick={handleAdd} disabled={submitting}>
               {submitting ? "Creating..." : "Create User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import CSV Confirmation Dialog */}
+      <Dialog open={importOpen} onOpenChange={(open) => { if (!submitting) { setImportOpen(open); if (!open) setImportPreview(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Import CSV — Confirm Changes</DialogTitle>
+            <DialogDescription>
+              Review what will be deleted and imported before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+          {importPreview && (
+            <div className="space-y-4 text-sm">
+              {/* Users to delete */}
+              <div className="space-y-1">
+                <p className="font-semibold text-destructive">
+                  Delete {importPreview.toDelete.length} non-coordinator user{importPreview.toDelete.length !== 1 ? "s" : ""}
+                </p>
+                <ScrollArea className="h-32 rounded border border-border p-2">
+                  {importPreview.toDelete.map((u) => (
+                    <p key={u.user_id} className="text-muted-foreground leading-5">
+                      {u.full_name} <span className="text-xs">({u.net_id})</span>
+                    </p>
+                  ))}
+                  {importPreview.toDelete.length === 0 && (
+                    <p className="text-muted-foreground italic">No users to delete.</p>
+                  )}
+                </ScrollArea>
+              </div>
+
+              {/* Users to import */}
+              <div className="space-y-1">
+                <p className="font-semibold">
+                  Import {importPreview.toImport.length} user{importPreview.toImport.length !== 1 ? "s" : ""}
+                </p>
+                <ScrollArea className="h-40 rounded border border-border p-2">
+                  {importPreview.toImport.map((u) => (
+                    <p key={u.net_id} className="text-muted-foreground leading-5">
+                      {u.full_name} <span className="text-xs">({u.net_id} · {u.role})</span>
+                    </p>
+                  ))}
+                </ScrollArea>
+              </div>
+
+              {/* Unresolved supervisor warnings */}
+              {importPreview.unresolvedSupervisors.length > 0 && (
+                <div className="rounded border border-yellow-400 bg-yellow-50 px-3 py-2 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-600">
+                  <p className="font-semibold">Supervisor mapping warnings</p>
+                  <p className="mt-0.5">
+                    The following supervisor NetIDs are not in the CSV and will be skipped:{" "}
+                    <span className="font-mono">{importPreview.unresolvedSupervisors.join(", ")}</span>
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                The coordinator account is excluded from both deletion and import.
+              </p>
+
+              {/* Progress */}
+              {importProgress && (
+                <div className="space-y-1">
+                  <p className="text-muted-foreground animate-pulse">{importProgress}</p>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full animate-pulse rounded-full bg-primary" style={{ width: "100%" }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setImportOpen(false); setImportPreview(null); }} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmImport} disabled={submitting}>
+              {submitting ? "Working…" : "Delete & Import"}
             </Button>
           </DialogFooter>
         </DialogContent>
