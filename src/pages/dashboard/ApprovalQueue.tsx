@@ -16,11 +16,32 @@ export default function ApprovalQueue() {
 
   const fetchCompletions = async () => {
     if (!user) return;
-    const { data } = await supabase
+
+    // Step 1: fetch pending completions from employees (exclude own — own pending items
+    // belong in the supervisor's own supervisor's queue, not theirs)
+    const { data: completionData } = await supabase
       .from("training_completions")
-      .select("id, user_id, completed_at, status, training:trainings(title), profile:profiles!training_completions_user_id_fkey(full_name)")
-      .eq("status", "pending");
-    setCompletions(data || []);
+      .select("id, user_id, completed_at, status, training:trainings(title)")
+      .eq("status", "pending")
+      .neq("user_id", user.id);
+
+    const completions = completionData || [];
+
+    // Step 2: fetch profiles separately (training_completions has no direct FK to profiles)
+    const userIds = [...new Set(completions.map((c: any) => c.user_id))];
+    const { data: profileData } = userIds.length
+      ? await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds)
+      : { data: [] };
+
+    const profileMap = new Map<string, string>();
+    (profileData || []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
+
+    setCompletions(
+      completions.map((c: any) => ({
+        ...c,
+        profile: { full_name: profileMap.get(c.user_id) || "Unknown" },
+      }))
+    );
     setLoading(false);
   };
 
