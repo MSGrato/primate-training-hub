@@ -89,6 +89,7 @@ export default function JobTitles() {
     setEditId(t.id);
     setEditName(t.name);
     setEditDescription(t.description || "");
+    setEditDepartment(t.department || "");
     setEditTagIds(t.job_title_tags?.map((tt: any) => tt.job_tag_id) || []);
     setEditOpen(true);
   };
