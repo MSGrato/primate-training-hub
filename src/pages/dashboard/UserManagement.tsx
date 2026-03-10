@@ -544,13 +544,23 @@ export default function UserManagement() {
     if (toDelete.length === 0) return;
     setSubmitting(true);
     try {
+      let successCount = 0;
+      const errors: string[] = [];
       for (let i = 0; i < toDelete.length; i++) {
         setBulkDeleteProgress(`Deleting ${i + 1} of ${toDelete.length}: ${toDelete[i].full_name}…`);
         try {
           await invokeManageUsers({ action: "delete", user_id: toDelete[i].user_id });
-        } catch { /* continue */ }
+          successCount++;
+        } catch (err: any) {
+          console.error(`Failed to delete ${toDelete[i].full_name}:`, err);
+          errors.push(`${toDelete[i].full_name}: ${err.message}`);
+        }
       }
-      toast({ title: "Bulk delete complete", description: `Deleted ${toDelete.length} user(s).` });
+      if (errors.length > 0) {
+        toast({ title: "Bulk delete partially failed", description: `${successCount} deleted, ${errors.length} failed. Check console for details.`, variant: "destructive" });
+      } else {
+        toast({ title: "Bulk delete complete", description: `Deleted ${successCount} user(s).` });
+      }
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
       setBulkDeleteProgress(null);
