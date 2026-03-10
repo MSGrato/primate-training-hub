@@ -637,6 +637,7 @@ export default function UserManagement() {
               {displayedUsers.map((u) => (
                 <Card key={u.user_id}>
                   <CardContent className="pt-4 pb-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="font-medium text-sm">{u.full_name}</p>
                         <p className="text-xs text-muted-foreground">{u.net_id}</p>
