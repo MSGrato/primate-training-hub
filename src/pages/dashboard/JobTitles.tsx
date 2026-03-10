@@ -192,6 +192,7 @@ export default function JobTitles() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Tags</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
