@@ -147,6 +147,19 @@ export default function JobTitles() {
                 <Label>Description</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Job description (optional)" />
               </div>
+              <div className="space-y-2">
+                <Label>Department</Label>
+                <Select value={department} onValueChange={setDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {tags.length > 0 && (
                 <div className="space-y-2">
                   <Label>Tags</Label>
