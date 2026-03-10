@@ -745,6 +745,14 @@ export default function UserManagement() {
               <TableBody>
                 {displayedUsers.map((u) => (
                   <TableRow key={u.user_id}>
+                    <TableCell>
+                      {u.role !== "coordinator" ? (
+                        <Checkbox
+                          checked={selectedIds.has(u.user_id)}
+                          onCheckedChange={() => toggleSelect(u.user_id)}
+                        />
+                      ) : null}
+                    </TableCell>
                     <TableCell className="font-medium">{u.full_name}</TableCell>
                     <TableCell>{u.net_id}</TableCell>
                     <TableCell>
