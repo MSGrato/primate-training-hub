@@ -37,6 +37,7 @@ export default function JobTitles() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editDepartment, setEditDepartment] = useState("");
   const [editTagIds, setEditTagIds] = useState<string[]>([]);
 
   const fetchTitles = async () => {
