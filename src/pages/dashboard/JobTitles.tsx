@@ -10,7 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Pencil } from "lucide-react";
+
+const DEPARTMENTS = ["Husbandry", "BMS", "Clinical"] as const;
 
 interface JobTag {
   id: string;
@@ -27,6 +30,7 @@ export default function JobTitles() {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [department, setDepartment] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Edit dialog
@@ -34,12 +38,13 @@ export default function JobTitles() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editDepartment, setEditDepartment] = useState("");
   const [editTagIds, setEditTagIds] = useState<string[]>([]);
 
   const fetchTitles = async () => {
     const { data } = await supabase
       .from("job_titles")
-      .select("id, name, description, job_title_tags(job_tag_id, job_tag:job_tags(name))")
+      .select("id, name, description, department, job_title_tags(job_tag_id, job_tag:job_tags(name))")
       .order("name");
     setTitles(data || []);
     setLoading(false);
@@ -59,7 +64,7 @@ export default function JobTitles() {
     if (!name.trim()) return;
     const { data: inserted, error } = await supabase
       .from("job_titles")
-      .insert({ name: name.trim(), description: description.trim() || null })
+      .insert({ name: name.trim(), description: description.trim() || null, department: department || null })
       .select("id")
       .single();
     if (error) {
@@ -74,6 +79,7 @@ export default function JobTitles() {
     toast({ title: "Job title created" });
     setName("");
     setDescription("");
+    setDepartment("");
     setSelectedTagIds([]);
     setCreateOpen(false);
     fetchTitles();
@@ -83,6 +89,7 @@ export default function JobTitles() {
     setEditId(t.id);
     setEditName(t.name);
     setEditDescription(t.description || "");
+    setEditDepartment(t.department || "");
     setEditTagIds(t.job_title_tags?.map((tt: any) => tt.job_tag_id) || []);
     setEditOpen(true);
   };
@@ -91,7 +98,7 @@ export default function JobTitles() {
     if (!editId || !editName.trim()) return;
     const { error } = await supabase
       .from("job_titles")
-      .update({ name: editName.trim(), description: editDescription.trim() || null })
+      .update({ name: editName.trim(), description: editDescription.trim() || null, department: editDepartment || null })
       .eq("id", editId);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -140,6 +147,19 @@ export default function JobTitles() {
                 <Label>Description</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Job description (optional)" />
               </div>
+              <div className="space-y-2">
+                <Label>Department</Label>
+                <Select value={department} onValueChange={setDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {tags.length > 0 && (
                 <div className="space-y-2">
                   <Label>Tags</Label>
@@ -172,6 +192,7 @@ export default function JobTitles() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Tags</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
@@ -181,6 +202,7 @@ export default function JobTitles() {
               {titles.map((t: any) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.name}</TableCell>
+                  <TableCell>{t.department || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{t.description || "—"}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -218,6 +240,19 @@ export default function JobTitles() {
             <div className="space-y-2">
               <Label>Description</Label>
               <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Job description (optional)" />
+            </div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Select value={editDepartment} onValueChange={setEditDepartment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {tags.length > 0 && (
               <div className="space-y-2">
