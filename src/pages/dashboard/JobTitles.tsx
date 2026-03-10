@@ -97,7 +97,7 @@ export default function JobTitles() {
     if (!editId || !editName.trim()) return;
     const { error } = await supabase
       .from("job_titles")
-      .update({ name: editName.trim(), description: editDescription.trim() || null })
+      .update({ name: editName.trim(), description: editDescription.trim() || null, department: editDepartment || null })
       .eq("id", editId);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
