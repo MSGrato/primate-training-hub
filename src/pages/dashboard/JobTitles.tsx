@@ -30,6 +30,7 @@ export default function JobTitles() {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [department, setDepartment] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Edit dialog

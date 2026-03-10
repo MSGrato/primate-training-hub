@@ -80,7 +80,7 @@ export default function History() {
       const { data: titleData } = titleIds.length
         ? await supabase
             .from("job_titles")
-            .select("id, name, description, job_title_tags(job_tag:job_tags(name))")
+            .select("id, name, department, job_title_tags(job_tag:job_tags(name))")
             .in("id", titleIds)
         : { data: [] };
 
