@@ -79,6 +79,7 @@ export default function JobTitles() {
     toast({ title: "Job title created" });
     setName("");
     setDescription("");
+    setDepartment("");
     setSelectedTagIds([]);
     setCreateOpen(false);
     fetchTitles();
