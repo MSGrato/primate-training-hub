@@ -999,6 +999,41 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={(open) => { if (!submitting) setBulkDeleteOpen(open); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Delete</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {selectedIds.size} user(s) and all their associated data. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-60 rounded border border-border p-2">
+            {users
+              .filter((u) => selectedIds.has(u.user_id) && u.role !== "coordinator")
+              .map((u) => (
+                <p key={u.user_id} className="text-sm text-muted-foreground leading-5">
+                  {u.full_name} <span className="text-xs">({u.net_id})</span>
+                </p>
+              ))}
+          </ScrollArea>
+          {bulkDeleteProgress && (
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground animate-pulse">{bulkDeleteProgress}</p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full animate-pulse rounded-full bg-primary" style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+              {submitting ? "Deleting…" : `Delete ${selectedIds.size} Users`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
