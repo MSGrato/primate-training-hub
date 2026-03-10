@@ -43,7 +43,7 @@ export default function JobTitles() {
   const fetchTitles = async () => {
     const { data } = await supabase
       .from("job_titles")
-      .select("id, name, description, job_title_tags(job_tag_id, job_tag:job_tags(name))")
+      .select("id, name, description, department, job_title_tags(job_tag_id, job_tag:job_tags(name))")
       .order("name");
     setTitles(data || []);
     setLoading(false);
