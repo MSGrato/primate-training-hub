@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Pencil, Upload, Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { UserPlus, Pencil, Upload } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -56,10 +55,8 @@ export default function UserManagement() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Bulk delete state
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [bulkDeleteProgress, setBulkDeleteProgress] = useState<string | null>(null);
+
+
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -521,56 +518,8 @@ export default function UserManagement() {
     });
   }, [users, filterJobTitleId, filterTag, sortBy, jobTitleById]);
 
-  const toggleSelect = (userId: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId); else next.add(userId);
-      return next;
-    });
-  };
 
-  const toggleSelectAll = () => {
-    const selectableIds = displayedUsers.filter((u) => u.role !== "coordinator").map((u) => u.user_id);
-    const allSelected = selectableIds.every((id) => selectedIds.has(id));
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(selectableIds));
-    }
-  };
 
-  const handleBulkDelete = async () => {
-    const toDelete = users.filter((u) => selectedIds.has(u.user_id) && u.role !== "coordinator");
-    if (toDelete.length === 0) return;
-    setSubmitting(true);
-    try {
-      let successCount = 0;
-      const errors: string[] = [];
-      for (let i = 0; i < toDelete.length; i++) {
-        setBulkDeleteProgress(`Deleting ${i + 1} of ${toDelete.length}: ${toDelete[i].full_name}…`);
-        try {
-          await invokeManageUsers({ action: "delete", user_id: toDelete[i].user_id });
-          successCount++;
-        } catch (err: any) {
-          console.error(`Failed to delete ${toDelete[i].full_name}:`, err);
-          errors.push(`${toDelete[i].full_name}: ${err.message}`);
-        }
-      }
-      if (errors.length > 0) {
-        toast({ title: "Bulk delete partially failed", description: `${successCount} deleted, ${errors.length} failed. Check console for details.`, variant: "destructive" });
-      } else {
-        toast({ title: "Bulk delete complete", description: `Deleted ${successCount} user(s).` });
-      }
-      setSelectedIds(new Set());
-      setBulkDeleteOpen(false);
-      setBulkDeleteProgress(null);
-      await fetchUsers();
-      await fetchSupervisorMappings();
-    } finally {
-      setSubmitting(false);
-      setBulkDeleteProgress(null);
-    }
-  };
 
   if (loading) return <div className="text-muted-foreground">Loading...</div>;
 
@@ -596,12 +545,6 @@ export default function UserManagement() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">User Management</h1>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {selectedIds.size > 0 && (
-            <Button variant="destructive" className="w-full sm:w-auto"
-              onClick={() => setBulkDeleteOpen(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />Delete {selectedIds.size} Selected
-            </Button>
-          )}
           <Button variant="outline" className="w-full sm:w-auto"
             onClick={() => csvFileInputRef.current?.click()}>
             <Upload className="mr-2 h-4 w-4" />Import CSV
@@ -695,18 +638,9 @@ export default function UserManagement() {
                 <Card key={u.user_id}>
                   <CardContent className="pt-4 pb-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2">
-                        {u.role !== "coordinator" && (
-                          <Checkbox
-                            checked={selectedIds.has(u.user_id)}
-                            onCheckedChange={() => toggleSelect(u.user_id)}
-                            className="mt-0.5"
-                          />
-                        )}
-                        <div>
-                          <p className="font-medium text-sm">{u.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{u.net_id}</p>
-                        </div>
+                      <div>
+                        <p className="font-medium text-sm">{u.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{u.net_id}</p>
                       </div>
                       <Badge className="bg-secondary text-secondary-foreground shrink-0">{roleLabel(u.role)}</Badge>
                     </div>
@@ -737,12 +671,6 @@ export default function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={displayedUsers.filter(u => u.role !== "coordinator").length > 0 && displayedUsers.filter(u => u.role !== "coordinator").every(u => selectedIds.has(u.user_id))}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>NetID</TableHead>
                   <TableHead>Role</TableHead>
@@ -755,14 +683,7 @@ export default function UserManagement() {
               <TableBody>
                 {displayedUsers.map((u) => (
                   <TableRow key={u.user_id}>
-                    <TableCell>
-                      {u.role !== "coordinator" ? (
-                        <Checkbox
-                          checked={selectedIds.has(u.user_id)}
-                          onCheckedChange={() => toggleSelect(u.user_id)}
-                        />
-                      ) : null}
-                    </TableCell>
+
                     <TableCell className="font-medium">{u.full_name}</TableCell>
                     <TableCell>{u.net_id}</TableCell>
                     <TableCell>
@@ -1010,40 +931,8 @@ export default function UserManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Delete Confirmation Dialog */}
-      <Dialog open={bulkDeleteOpen} onOpenChange={(open) => { if (!submitting) setBulkDeleteOpen(open); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Confirm Bulk Delete</DialogTitle>
-            <DialogDescription>
-              This will permanently delete {selectedIds.size} user(s) and all their associated data. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-60 rounded border border-border p-2">
-            {users
-              .filter((u) => selectedIds.has(u.user_id) && u.role !== "coordinator")
-              .map((u) => (
-                <p key={u.user_id} className="text-sm text-muted-foreground leading-5">
-                  {u.full_name} <span className="text-xs">({u.net_id})</span>
-                </p>
-              ))}
-          </ScrollArea>
-          {bulkDeleteProgress && (
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground animate-pulse">{bulkDeleteProgress}</p>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full animate-pulse rounded-full bg-primary" style={{ width: "100%" }} />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={submitting}>Cancel</Button>
-            <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
-              {submitting ? "Deleting…" : `Delete ${selectedIds.size} Users`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+
     </div>
   );
 }
