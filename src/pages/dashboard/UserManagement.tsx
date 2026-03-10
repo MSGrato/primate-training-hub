@@ -637,19 +637,9 @@ export default function UserManagement() {
               {displayedUsers.map((u) => (
                 <Card key={u.user_id}>
                   <CardContent className="pt-4 pb-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2">
-                        {u.role !== "coordinator" && (
-                          <Checkbox
-                            checked={selectedIds.has(u.user_id)}
-                            onCheckedChange={() => toggleSelect(u.user_id)}
-                            className="mt-0.5"
-                          />
-                        )}
-                        <div>
-                          <p className="font-medium text-sm">{u.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{u.net_id}</p>
-                        </div>
+                      <div>
+                        <p className="font-medium text-sm">{u.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{u.net_id}</p>
                       </div>
                       <Badge className="bg-secondary text-secondary-foreground shrink-0">{roleLabel(u.role)}</Badge>
                     </div>
