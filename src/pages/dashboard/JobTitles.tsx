@@ -202,6 +202,7 @@ export default function JobTitles() {
               {titles.map((t: any) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.name}</TableCell>
+                  <TableCell>{t.department || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{t.description || "—"}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
