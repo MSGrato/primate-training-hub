@@ -56,6 +56,11 @@ export default function UserManagement() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Bulk delete state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState<string | null>(null);
+
   // Form state
   const [formName, setFormName] = useState("");
   const [formNetId, setFormNetId] = useState("");
