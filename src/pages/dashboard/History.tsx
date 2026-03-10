@@ -96,7 +96,7 @@ export default function History() {
       (titleData || []).forEach((title: any) => {
         titleById.set(title.id, {
           name: title.name,
-          department: title.description || "Unassigned",
+          department: title.department || "Unassigned",
           tags: (title.job_title_tags || [])
             .map((assignment: any) => assignment.job_tag?.name)
             .filter((tagName: string | null): tagName is string => !!tagName),
