@@ -64,7 +64,7 @@ export default function JobTitles() {
     if (!name.trim()) return;
     const { data: inserted, error } = await supabase
       .from("job_titles")
-      .insert({ name: name.trim(), description: description.trim() || null })
+      .insert({ name: name.trim(), description: description.trim() || null, department: department || null })
       .select("id")
       .single();
     if (error) {
