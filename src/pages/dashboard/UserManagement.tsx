@@ -518,56 +518,8 @@ export default function UserManagement() {
     });
   }, [users, filterJobTitleId, filterTag, sortBy, jobTitleById]);
 
-  const toggleSelect = (userId: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId); else next.add(userId);
-      return next;
-    });
-  };
 
-  const toggleSelectAll = () => {
-    const selectableIds = displayedUsers.filter((u) => u.role !== "coordinator").map((u) => u.user_id);
-    const allSelected = selectableIds.every((id) => selectedIds.has(id));
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(selectableIds));
-    }
-  };
 
-  const handleBulkDelete = async () => {
-    const toDelete = users.filter((u) => selectedIds.has(u.user_id) && u.role !== "coordinator");
-    if (toDelete.length === 0) return;
-    setSubmitting(true);
-    try {
-      let successCount = 0;
-      const errors: string[] = [];
-      for (let i = 0; i < toDelete.length; i++) {
-        setBulkDeleteProgress(`Deleting ${i + 1} of ${toDelete.length}: ${toDelete[i].full_name}…`);
-        try {
-          await invokeManageUsers({ action: "delete", user_id: toDelete[i].user_id });
-          successCount++;
-        } catch (err: any) {
-          console.error(`Failed to delete ${toDelete[i].full_name}:`, err);
-          errors.push(`${toDelete[i].full_name}: ${err.message}`);
-        }
-      }
-      if (errors.length > 0) {
-        toast({ title: "Bulk delete partially failed", description: `${successCount} deleted, ${errors.length} failed. Check console for details.`, variant: "destructive" });
-      } else {
-        toast({ title: "Bulk delete complete", description: `Deleted ${successCount} user(s).` });
-      }
-      setSelectedIds(new Set());
-      setBulkDeleteOpen(false);
-      setBulkDeleteProgress(null);
-      await fetchUsers();
-      await fetchSupervisorMappings();
-    } finally {
-      setSubmitting(false);
-      setBulkDeleteProgress(null);
-    }
-  };
 
   if (loading) return <div className="text-muted-foreground">Loading...</div>;
 
