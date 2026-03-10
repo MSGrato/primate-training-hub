@@ -1,0 +1,1 @@
+ALTER TABLE public.job_titles ADD COLUMN department text;

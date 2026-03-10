@@ -98,18 +98,21 @@ export type Database = {
       job_titles: {
         Row: {
           created_at: string
+          department: string | null
           description: string | null
           id: string
           name: string
         }
         Insert: {
           created_at?: string
+          department?: string | null
           description?: string | null
           id?: string
           name: string
         }
         Update: {
           created_at?: string
+          department?: string | null
           description?: string | null
           id?: string
           name?: string
