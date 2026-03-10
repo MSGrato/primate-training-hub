@@ -681,12 +681,6 @@ export default function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={displayedUsers.filter(u => u.role !== "coordinator").length > 0 && displayedUsers.filter(u => u.role !== "coordinator").every(u => selectedIds.has(u.user_id))}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>NetID</TableHead>
                   <TableHead>Role</TableHead>
@@ -699,14 +693,7 @@ export default function UserManagement() {
               <TableBody>
                 {displayedUsers.map((u) => (
                   <TableRow key={u.user_id}>
-                    <TableCell>
-                      {u.role !== "coordinator" ? (
-                        <Checkbox
-                          checked={selectedIds.has(u.user_id)}
-                          onCheckedChange={() => toggleSelect(u.user_id)}
-                        />
-                      ) : null}
-                    </TableCell>
+
                     <TableCell className="font-medium">{u.full_name}</TableCell>
                     <TableCell>{u.net_id}</TableCell>
                     <TableCell>
